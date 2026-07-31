@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Desk {
+  id         Int       @id @default(autoincrement())
+  name       String
+  zone       String
+  floorId    String
+  buildingId String
+  xPosition  Float
+  yPosition  Float
+  active     Boolean   @default(true)
+  restricted Boolean   @default(false)
+  bookings   Booking[]
+}
+
+model Booking {
+  id          Int       @id @default(autoincrement())
+  desk        Desk      @relation(fields: [deskId], references: [id])
+  deskId      Int
+  userId      String
+  userEmail   String
+  bookingDate String
+  status      String    @default("CONFIRMED")
+  qrToken     String    @default(uuid())
+  checkedInAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model Floor {
+  id       Int    @id @default(autoincrement())
+  floorId  String @unique
+  name     String
+  imageUrl String
+}
