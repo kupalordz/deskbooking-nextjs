@@ -76,21 +76,21 @@ export default function FloorMap() {
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 56px)' }}>
       <div className="px-4 sm:px-6 py-3 bg-white border-b border-gray-200 flex gap-2 items-center flex-wrap">
-        <span className="text-sm font-medium text-gray-700 mr-2">Floor:</span>
+        <span className="text-sm font-medium text-gray-700 mr-2 whitespace-nowrap">Floor:</span>
         {floors.map((f) => (
           <button
             key={f.floorId}
             onClick={() => { setFloor(f.floorId); setSelected(null); }}
-            className={`px-3 py-1 rounded-full border text-sm ${floor === f.floorId ? 'bg-[#1e3a5f] text-white border-[#1e3a5f]' : 'bg-white text-gray-700 border-gray-200'}`}
+            className={`px-3 py-1 rounded-full border text-sm whitespace-nowrap ${floor === f.floorId ? 'bg-[#1e3a5f] text-white border-[#1e3a5f]' : 'bg-white text-gray-700 border-gray-200'}`}
           >
             {f.name}
           </button>
         ))}
         {floors.length === 0 && <span className="text-sm text-gray-400">No floors yet. Upload one in Admin.</span>}
-        <div className="ml-auto flex gap-4 text-xs text-gray-500 items-center">
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-600 inline-block"></span>Available</span>
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-600 inline-block"></span>Booked</span>
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-purple-600 inline-block"></span>Restricted</span>
+        <div className="flex gap-3 sm:gap-4 text-xs text-gray-500 items-center flex-wrap sm:ml-auto">
+          <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-2.5 h-2.5 rounded-full bg-green-600 inline-block flex-shrink-0"></span>Available</span>
+          <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-2.5 h-2.5 rounded-full bg-red-600 inline-block flex-shrink-0"></span>Booked</span>
+          <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-2.5 h-2.5 rounded-full bg-purple-600 inline-block flex-shrink-0"></span>Restricted</span>
         </div>
       </div>
 
@@ -112,11 +112,11 @@ export default function FloorMap() {
             wheel={{ step: 0.2 }}
           >
             {({ zoomIn, zoomOut, resetTransform }) => (
-              <>
-                <div className="absolute top-3 right-3 z-10 flex flex-col gap-1 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                  <button onClick={() => zoomIn()} className="w-9 h-9 flex items-center justify-center text-lg text-gray-600 hover:bg-gray-50 border-b border-gray-200">+</button>
-                  <button onClick={() => zoomOut()} className="w-9 h-9 flex items-center justify-center text-lg text-gray-600 hover:bg-gray-50 border-b border-gray-200">-</button>
-                  <button onClick={() => resetTransform()} className="w-9 h-9 flex items-center justify-center text-xs text-gray-600 hover:bg-gray-50">Reset</button>
+              <div className="w-full h-full relative">
+                <div className="absolute top-3 right-3 z-50 flex flex-col gap-1 bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+                  <button type="button" onClick={() => zoomIn()} className="w-10 h-10 flex items-center justify-center text-xl text-gray-700 hover:bg-gray-50 border-b border-gray-200">+</button>
+                  <button type="button" onClick={() => zoomOut()} className="w-10 h-10 flex items-center justify-center text-xl text-gray-700 hover:bg-gray-50 border-b border-gray-200">-</button>
+                  <button type="button" onClick={() => resetTransform()} className="w-10 h-10 flex items-center justify-center text-[10px] text-gray-700 hover:bg-gray-50">Reset</button>
                 </div>
 
                 <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: '100%', height: '100%' }}>
@@ -137,20 +137,40 @@ export default function FloorMap() {
                           left: `${d.xPosition / 10}%`,
                           top: `${d.yPosition / 10}%`,
                           transform: 'translate(-50%, -50%)',
-                          width: selected?.id === d.id ? '14px' : '10px',
-                          height: selected?.id === d.id ? '14px' : '10px',
-                          borderRadius: '50%',
-                          background: pinColor(d),
-                          border: '1.5px solid white',
-                          boxShadow: '0 0 0 1px rgba(0,0,0,0.15)',
                           cursor: 'pointer',
+                          zIndex: 20,
                         }}
                         title={d.name}
-                      />
+                      >
+                        <div
+                          style={{
+                            position: 'absolute',
+                            left: '50%',
+                            top: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: selected?.id === d.id ? '34px' : '26px',
+                            height: selected?.id === d.id ? '34px' : '26px',
+                            borderRadius: '50%',
+                            background: pinColor(d),
+                            opacity: 0.35,
+                          }}
+                        />
+                        <div
+                          style={{
+                            position: 'relative',
+                            width: selected?.id === d.id ? '16px' : '12px',
+                            height: selected?.id === d.id ? '16px' : '12px',
+                            borderRadius: '50%',
+                            background: pinColor(d),
+                            border: '2px solid white',
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.5)',
+                          }}
+                        />
+                      </div>
                     ))}
                   </div>
                 </TransformComponent>
-              </>
+              </div>
             )}
           </TransformWrapper>
         )}
