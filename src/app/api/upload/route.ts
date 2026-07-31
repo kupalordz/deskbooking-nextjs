@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { writeFile } from 'fs/promises';
-import path from 'path';
+import { put } from '@vercel/blob';
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -10,13 +9,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No file provided' }, { status: 400 });
   }
 
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
-
   const safeName = Date.now() + '-' + file.name.replace(/[^a-zA-Z0-9.\-_]/g, '');
-  const filePath = path.join(process.cwd(), 'public', 'floorplans', safeName);
+  const blob = await put(safeName, file, { access: 'public' });
 
-  await writeFile(filePath, buffer);
-
-  return NextResponse.json({ url: '/floorplans/' + safeName });
+  return NextResponse.json({ url: blob.url });
 }
