@@ -15,6 +15,8 @@ type Desk = {
 
 type Floor = { id: number; floorId: string; name: string; imageUrl: string };
 
+type BookingSummary = { bookingDate: string; status: string; deskId: number };
+
 export default function FloorMap() {
   const [floors, setFloors] = useState<Floor[]>([]);
   const [desks, setDesks] = useState<Desk[]>([]);
@@ -30,16 +32,19 @@ export default function FloorMap() {
       if (list.length > 0 && !floor) setFloor(list[0].floorId);
     });
     fetch('/api/desks').then((r) => r.json()).then((d) => setDesks(Array.isArray(d) ? d : []));
-    fetch('/api/bookings').then((r) => r.json()).then((d: any) => {
+    fetch('/api/bookings').then((r) => r.json()).then((d: BookingSummary[]) => {
       const today = new Date().toISOString().split('T')[0];
       const ids = (Array.isArray(d) ? d : [])
-        .filter((b: any) => b.bookingDate === today && b.status !== 'CANCELLED')
-        .map((b: any) => b.deskId);
+        .filter((b: BookingSummary) => b.bookingDate === today && b.status !== 'CANCELLED')
+        .map((b: BookingSummary) => b.deskId);
       setBookedIds(ids);
     });
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const currentFloor = floors.find((f) => f.floorId === floor);
   const floorDesks = desks.filter((d) => d.floorId === floor && d.active);
@@ -116,6 +121,7 @@ export default function FloorMap() {
 
                 <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: '100%', height: '100%' }}>
                   <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={currentFloor.imageUrl}
                       alt={currentFloor.name}

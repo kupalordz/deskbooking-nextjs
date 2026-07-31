@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaLibSql } from '@prisma/adapter-libsql';
 import { NextResponse } from 'next/server';
 
-const adapter = new PrismaLibSql({ url: 'file:./dev.db' });
+const adapter = new PrismaLibSql({ url: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
 export async function DELETE(
