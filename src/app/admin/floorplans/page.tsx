@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 type Floor = { id: number; floorId: string; name: string; imageUrl: string; isParking: boolean };
 type Desk = {
@@ -41,6 +42,8 @@ export default function FloorPlanBuilder() {
   const [showGrid, setShowGrid] = useState(false);
   const [snapLines, setSnapLines] = useState<{ type: 'x' | 'y'; value: number }[]>([]);
   const imgRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mapTransform = useRef<any>(null);
   const hasMoved = useRef(false);
 
   const [locCountry, setLocCountry] = useState('');
@@ -384,6 +387,7 @@ export default function FloorPlanBuilder() {
           {/* Map */}
           <div className="flex-1 bg-white rounded-2xl p-4 shadow-sm ring-1 ring-gray-100">
             {/* Snap controls */}
+            {/* Toolbar: snap controls + zoom buttons */}
             <div className="flex items-center gap-4 mb-3 flex-wrap">
               <div className="flex items-center gap-1.5">
                 <span className="text-xs text-gray-500">Grid</span>
@@ -404,100 +408,108 @@ export default function FloorPlanBuilder() {
                 <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} className="accent-[#1e3a5f] w-3.5 h-3.5" />
                 <span className="text-xs text-gray-500">Show grid</span>
               </label>
-              <span className="text-xs text-gray-300 ml-auto">Click pin to edit · Drag to move</span>
+              <div className="flex items-center gap-1 ml-auto">
+                <button onClick={() => mapTransform.current?.zoomIn(0.4)} className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-base leading-none">+</button>
+                <button onClick={() => mapTransform.current?.zoomOut(0.4)} className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-base leading-none">−</button>
+                <button onClick={() => mapTransform.current?.resetTransform()} className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 text-sm leading-none">↺</button>
+              </div>
             </div>
-            <div
-              ref={imgRef}
-              onClick={handleImageClick}
-              onMouseMove={handleMapMouseMove}
-              onMouseUp={handleMapMouseUp}
-              onMouseLeave={handleMapMouseUp}
-              style={{ position: 'relative', width: '100%', borderRadius: 8, cursor: pendingPos ? 'default' : 'crosshair', userSelect: 'none', lineHeight: 0 }}
+            <TransformWrapper
+              ref={mapTransform}
+              initialScale={1} minScale={0.2} maxScale={8} centerOnInit
+              panning={{ disabled: dragId !== null }}
+              doubleClick={{ mode: 'zoomIn', step: 0.5 }}
+              wheel={{ step: 0.2 }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={selectedFloor.imageUrl} alt={selectedFloor.name} style={{ width: '100%', height: 'auto', display: 'block', pointerEvents: 'none' }} draggable={false} />
+              <TransformComponent wrapperStyle={{ width: '100%' }} contentStyle={{ width: '100%' }}>
+                <div
+                  ref={imgRef}
+                  onClick={handleImageClick}
+                  onMouseMove={handleMapMouseMove}
+                  onMouseUp={handleMapMouseUp}
+                  onMouseLeave={handleMapMouseUp}
+                  style={{ position: 'relative', width: '100%', borderRadius: 8, cursor: dragId ? 'grabbing' : pendingPos ? 'default' : 'crosshair', userSelect: 'none', lineHeight: 0 }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={selectedFloor.imageUrl} alt={selectedFloor.name} style={{ width: '100%', height: 'auto', display: 'block', pointerEvents: 'none' }} draggable={false} />
 
-              {/* Grid overlay */}
-              {showGrid && gridSize > 0 && (
-                <div style={{
-                  position: 'absolute', inset: 0, pointerEvents: 'none',
-                  backgroundImage: `linear-gradient(to right,rgba(59,130,246,0.12) 1px,transparent 1px),linear-gradient(to bottom,rgba(59,130,246,0.12) 1px,transparent 1px)`,
-                  backgroundSize: `${gridSize / 10}% ${gridSize / 10}%`,
-                }} />
-              )}
-
-              {/* Snap alignment lines */}
-              {snapLines.map((line, i) => line.type === 'x' ? (
-                <div key={i} style={{ position: 'absolute', left: `${line.value / 10}%`, top: 0, bottom: 0, width: 1, background: 'rgba(59,130,246,0.55)', pointerEvents: 'none' }} />
-              ) : (
-                <div key={i} style={{ position: 'absolute', top: `${line.value / 10}%`, left: 0, right: 0, height: 1, background: 'rgba(59,130,246,0.55)', pointerEvents: 'none' }} />
-              ))}
-
-              {/* Pending position indicator */}
-              {pendingPos && (
-                <div style={{ position: 'absolute', left: `${pendingPos.x / 10}%`, top: `${pendingPos.y / 10}%`, transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}>
-                  <div className="w-4 h-4 rounded-full bg-blue-500 ring-2 ring-white shadow-lg animate-pulse" />
-                </div>
-              )}
-
-              {/* Desk pins */}
-              {floorDesks.map((d) => {
-                const pw = d.pinWidth ?? 16;
-                const ph = d.pinHeight ?? 10;
-                const pr = d.pinRotation ?? 0;
-                const isSelected = selectedPinId === d.id;
-                return (
-                  <div
-                    key={d.id}
-                    onMouseDown={(e) => handlePinMouseDown(e, d.id)}
-                    onClick={(e) => e.stopPropagation()}
-                    style={{
-                      position: 'absolute',
-                      left: `${d.xPosition / 10}%`,
-                      top: `${d.yPosition / 10}%`,
-                      transform: 'translate(-50%, -50%)',
-                      cursor: dragId === d.id ? 'grabbing' : 'grab',
-                    }}
-                    className="group"
-                    title={d.name + ' · ' + d.zone}
-                  >
+                  {/* Grid overlay */}
+                  {showGrid && gridSize > 0 && (
                     <div style={{
-                      width: pw,
-                      height: ph,
-                      borderRadius: 2,
-                      background: d.restricted ? '#7c3aed' : '#16a34a',
-                      transform: `rotate(${pr}deg)`,
-                      opacity: isSelected ? 0.7 : 1,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      overflow: 'hidden',
-                      padding: '0 3px',
-                      boxSizing: 'border-box',
-                    }}>
-                      {pw >= 30 && ph >= 14 && (
-                        <span style={{ fontSize: Math.min(9, Math.floor(ph * 0.52)), fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', lineHeight: 1, letterSpacing: '0.01em' }}>
+                      position: 'absolute', inset: 0, pointerEvents: 'none',
+                      backgroundImage: `linear-gradient(to right,rgba(59,130,246,0.12) 1px,transparent 1px),linear-gradient(to bottom,rgba(59,130,246,0.12) 1px,transparent 1px)`,
+                      backgroundSize: `${gridSize / 10}% ${gridSize / 10}%`,
+                    }} />
+                  )}
+
+                  {/* Snap alignment lines */}
+                  {snapLines.map((line, i) => line.type === 'x' ? (
+                    <div key={i} style={{ position: 'absolute', left: `${line.value / 10}%`, top: 0, bottom: 0, width: 1, background: 'rgba(59,130,246,0.55)', pointerEvents: 'none' }} />
+                  ) : (
+                    <div key={i} style={{ position: 'absolute', top: `${line.value / 10}%`, left: 0, right: 0, height: 1, background: 'rgba(59,130,246,0.55)', pointerEvents: 'none' }} />
+                  ))}
+
+                  {/* Pending position indicator */}
+                  {pendingPos && (
+                    <div style={{ position: 'absolute', left: `${pendingPos.x / 10}%`, top: `${pendingPos.y / 10}%`, transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}>
+                      <div className="w-4 h-4 rounded-full bg-blue-500 ring-2 ring-white shadow-lg animate-pulse" />
+                    </div>
+                  )}
+
+                  {/* Desk pins */}
+                  {floorDesks.map((d) => {
+                    const pw = d.pinWidth ?? 16;
+                    const ph = d.pinHeight ?? 10;
+                    const pr = d.pinRotation ?? 0;
+                    const isSelected = selectedPinId === d.id;
+                    return (
+                      <div
+                        key={d.id}
+                        onMouseDown={(e) => handlePinMouseDown(e, d.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          position: 'absolute',
+                          left: `${d.xPosition / 10}%`,
+                          top: `${d.yPosition / 10}%`,
+                          transform: 'translate(-50%, -50%)',
+                          cursor: dragId === d.id ? 'grabbing' : 'grab',
+                        }}
+                        className="group"
+                        title={d.name + ' · ' + d.zone}
+                      >
+                        <div style={{
+                          width: pw, height: ph, borderRadius: 2,
+                          background: d.restricted ? '#7c3aed' : '#16a34a',
+                          transform: `rotate(${pr}deg)`,
+                          opacity: isSelected ? 0.7 : 1,
+                          display: 'flex', flexDirection: 'column', alignItems: 'stretch',
+                          justifyContent: 'center', overflow: 'hidden',
+                          padding: '0 3px', boxSizing: 'border-box',
+                        }}>
+                          {pw >= 30 && ph >= 14 && (
+                            <span style={{ fontSize: Math.min(9, Math.floor(ph * 0.52)), fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', lineHeight: 1, letterSpacing: '0.01em' }}>
+                              {d.name}
+                            </span>
+                          )}
+                          {pw >= 30 && ph >= 22 && d.zone && (
+                            <span style={{ fontSize: Math.min(7, Math.floor(ph * 0.35)), color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', lineHeight: 1.2 }}>
+                              {d.zone}
+                            </span>
+                          )}
+                        </div>
+                        <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-gray-900 text-white text-[10px] rounded px-1.5 py-0.5 whitespace-nowrap pointer-events-none z-30">
                           {d.name}
-                        </span>
-                      )}
-                      {pw >= 30 && ph >= 22 && d.zone && (
-                        <span style={{ fontSize: Math.min(7, Math.floor(ph * 0.35)), color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', lineHeight: 1.2 }}>
-                          {d.zone}
-                        </span>
-                      )}
-                    </div>
-                    <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-gray-900 text-white text-[10px] rounded px-1.5 py-0.5 whitespace-nowrap pointer-events-none z-30">
-                      {d.name}
-                    </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removeDesk(d.id); }}
-                      className="hidden group-hover:flex absolute -top-2 -right-2 w-4 h-4 bg-red-600 text-white rounded-full items-center justify-center text-[9px] z-30"
-                    >×</button>
-                  </div>
-                );
-              })}
-            </div>
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeDesk(d.id); }}
+                          className="hidden group-hover:flex absolute -top-2 -right-2 w-4 h-4 bg-red-600 text-white rounded-full items-center justify-center text-[9px] z-30"
+                        >×</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </TransformComponent>
+            </TransformWrapper>
           </div>
 
           {/* Right panel */}
