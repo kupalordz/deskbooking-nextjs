@@ -11,10 +11,19 @@ export async function PATCH(
 ) {
   const { id } = await params;
   const body = await request.json();
-  const updated = await prisma.parkingSpot.update({
-    where: { id: Number(id) },
-    data: { name: body.name, type: body.type, zone: body.zone },
-  });
+  const data: Record<string, unknown> = {};
+  if (body.name !== undefined) data.name = body.name;
+  if (body.type !== undefined) data.type = body.type;
+  if (body.zone !== undefined) data.zone = body.zone;
+  if (body.active !== undefined) data.active = body.active;
+  if (body.country !== undefined) data.country = body.country;
+  if (body.city !== undefined) data.city = body.city;
+  if (body.building !== undefined) data.building = body.building;
+  if (body.floor !== undefined) data.floor = body.floor;
+  if (body.floorId !== undefined) data.floorId = body.floorId;
+  if (body.xPosition !== undefined) data.xPosition = body.xPosition;
+  if (body.yPosition !== undefined) data.yPosition = body.yPosition;
+  const updated = await prisma.parkingSpot.update({ where: { id: Number(id) }, data });
   return NextResponse.json(updated);
 }
 

@@ -97,12 +97,19 @@ model ShiftSchedule {
 }
 
 model ParkingSpot {
-  id       Int              @id @default(autoincrement())
-  name     String
-  type     String           // "CAR" or "MOTORCYCLE"
-  zone     String
-  active   Boolean          @default(true)
-  bookings ParkingBooking[]
+  id         Int              @id @default(autoincrement())
+  name       String
+  type       String
+  zone       String
+  active     Boolean          @default(true)
+  country    String           @default("")
+  city       String           @default("")
+  building   String           @default("")
+  floor      String           @default("")
+  floorId    String           @default("")
+  xPosition  Float            @default(0)
+  yPosition  Float            @default(0)
+  bookings   ParkingBooking[]
 }
 
 model ParkingBooking {
