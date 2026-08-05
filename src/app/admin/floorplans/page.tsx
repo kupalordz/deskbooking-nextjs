@@ -36,6 +36,10 @@ export default function FloorPlanBuilder() {
   const [pickedDeskId, setPickedDeskId] = useState<string>('');
   const [selectedPinId, setSelectedPinId] = useState<number | null>(null);
   const [editPin, setEditPin] = useState<{ w: number; h: number; r: number } | null>(null);
+  const [gridSize, setGridSize] = useState(10);
+  const [snapDesks, setSnapDesks] = useState(true);
+  const [showGrid, setShowGrid] = useState(false);
+  const [snapLines, setSnapLines] = useState<{ type: 'x' | 'y'; value: number }[]>([]);
   const imgRef = useRef<HTMLDivElement>(null);
   const hasMoved = useRef(false);
 
@@ -131,6 +135,21 @@ export default function FloorPlanBuilder() {
     loadFloorDesks(selectedFloor.floorId); loadAllDesks();
   }
 
+  function applySnap(rawX: number, rawY: number, id: number) {
+    const DESK_THRESHOLD = 12;
+    let x = gridSize > 0 ? Math.round(rawX / gridSize) * gridSize : rawX;
+    let y = gridSize > 0 ? Math.round(rawY / gridSize) * gridSize : rawY;
+    const lines: { type: 'x' | 'y'; value: number }[] = [];
+    if (snapDesks) {
+      for (const d of floorDesks) {
+        if (d.id === id) continue;
+        if (Math.abs(rawX - d.xPosition) < DESK_THRESHOLD) { x = d.xPosition; lines.push({ type: 'x', value: d.xPosition }); }
+        if (Math.abs(rawY - d.yPosition) < DESK_THRESHOLD) { y = d.yPosition; lines.push({ type: 'y', value: d.yPosition }); }
+      }
+    }
+    return { x, y, lines };
+  }
+
   function handlePinMouseDown(e: React.MouseEvent, id: number) {
     e.stopPropagation();
     hasMoved.current = false;
@@ -141,13 +160,16 @@ export default function FloorPlanBuilder() {
     if (dragId === null || !imgRef.current) return;
     hasMoved.current = true;
     const rect = imgRef.current.getBoundingClientRect();
-    const xPct = Math.max(0, Math.min(1000, ((e.clientX - rect.left) / rect.width) * 1000));
-    const yPct = Math.max(0, Math.min(1000, ((e.clientY - rect.top) / rect.height) * 1000));
+    const rawX = Math.max(0, Math.min(1000, ((e.clientX - rect.left) / rect.width) * 1000));
+    const rawY = Math.max(0, Math.min(1000, ((e.clientY - rect.top) / rect.height) * 1000));
+    const { x: xPct, y: yPct, lines } = applySnap(rawX, rawY, dragId);
+    setSnapLines(lines);
     setFloorDesks((prev) => prev.map((d) => (d.id === dragId ? { ...d, xPosition: xPct, yPosition: yPct } : d)));
   }
 
   function handleMapMouseUp() {
     if (dragId === null) return;
+    setSnapLines([]);
     if (!hasMoved.current) {
       // Click (not drag) → toggle selection
       if (selectedPinId === dragId) {
@@ -361,7 +383,29 @@ export default function FloorPlanBuilder() {
         <div className="flex gap-5 flex-col lg:flex-row">
           {/* Map */}
           <div className="flex-1 bg-white rounded-2xl p-4 shadow-sm ring-1 ring-gray-100">
-            <p className="text-xs text-gray-400 mb-3">Click a pin to resize/rotate · Drag to reposition · Click map background to place new</p>
+            {/* Snap controls */}
+            <div className="flex items-center gap-4 mb-3 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-500">Grid</span>
+                <select value={gridSize} onChange={(e) => setGridSize(Number(e.target.value))}
+                  className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white focus:outline-none">
+                  <option value={0}>Off</option>
+                  <option value={5}>Fine (0.5%)</option>
+                  <option value={10}>Normal (1%)</option>
+                  <option value={20}>Coarse (2%)</option>
+                  <option value={50}>Large (5%)</option>
+                </select>
+              </div>
+              <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                <input type="checkbox" checked={snapDesks} onChange={(e) => setSnapDesks(e.target.checked)} className="accent-[#1e3a5f] w-3.5 h-3.5" />
+                <span className="text-xs text-gray-500">Snap to desks</span>
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} className="accent-[#1e3a5f] w-3.5 h-3.5" />
+                <span className="text-xs text-gray-500">Show grid</span>
+              </label>
+              <span className="text-xs text-gray-300 ml-auto">Click pin to edit · Drag to move</span>
+            </div>
             <div
               ref={imgRef}
               onClick={handleImageClick}
@@ -372,6 +416,22 @@ export default function FloorPlanBuilder() {
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={selectedFloor.imageUrl} alt={selectedFloor.name} style={{ width: '100%', height: 'auto', display: 'block', pointerEvents: 'none' }} draggable={false} />
+
+              {/* Grid overlay */}
+              {showGrid && gridSize > 0 && (
+                <div style={{
+                  position: 'absolute', inset: 0, pointerEvents: 'none',
+                  backgroundImage: `linear-gradient(to right,rgba(59,130,246,0.12) 1px,transparent 1px),linear-gradient(to bottom,rgba(59,130,246,0.12) 1px,transparent 1px)`,
+                  backgroundSize: `${gridSize / 10}% ${gridSize / 10}%`,
+                }} />
+              )}
+
+              {/* Snap alignment lines */}
+              {snapLines.map((line, i) => line.type === 'x' ? (
+                <div key={i} style={{ position: 'absolute', left: `${line.value / 10}%`, top: 0, bottom: 0, width: 1, background: 'rgba(59,130,246,0.55)', pointerEvents: 'none' }} />
+              ) : (
+                <div key={i} style={{ position: 'absolute', top: `${line.value / 10}%`, left: 0, right: 0, height: 1, background: 'rgba(59,130,246,0.55)', pointerEvents: 'none' }} />
+              ))}
 
               {/* Pending position indicator */}
               {pendingPos && (
