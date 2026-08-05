@@ -13,8 +13,7 @@ type Desk = {
   restricted: boolean;
 };
 
-type Floor = { id: number; floorId: string; name: string; imageUrl: string };
-
+type Floor = { id: number; floorId: string; name: string; imageUrl: string; isParking: boolean };
 type BookingSummary = { bookingDate: string; status: string; deskId: number };
 
 export default function FloorMap() {
@@ -27,7 +26,7 @@ export default function FloorMap() {
 
   function load() {
     fetch('/api/floors').then((r) => r.json()).then((d) => {
-      const list = Array.isArray(d) ? d : [];
+      const list = (Array.isArray(d) ? d : []).filter((f: Floor) => !f.isParking);
       setFloors(list);
       if (list.length > 0 && !floor) setFloor(list[0].floorId);
     });
@@ -35,8 +34,8 @@ export default function FloorMap() {
     fetch('/api/bookings').then((r) => r.json()).then((d: BookingSummary[]) => {
       const today = new Date().toISOString().split('T')[0];
       const ids = (Array.isArray(d) ? d : [])
-        .filter((b: BookingSummary) => b.bookingDate === today && b.status !== 'CANCELLED')
-        .map((b: BookingSummary) => b.deskId);
+        .filter((b) => b.bookingDate === today && b.status !== 'CANCELLED')
+        .map((b) => b.deskId);
       setBookedIds(ids);
     });
   }
@@ -73,12 +72,13 @@ export default function FloorMap() {
     });
   }
 
+  // h-[calc(100vh-8rem)] = 100vh - top nav (4rem/64px) - bottom nav (4rem/64px)
+  // md:h-[calc(100vh-5rem)] = 100vh - desktop top nav (5rem/80px), no bottom nav
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 56px)' }}>
+    <div className="flex flex-col h-[calc(100vh-8rem)] md:h-[calc(100vh-5rem)]">
 
       {/* Header: floor tabs + legend */}
       <div className="bg-white border-b border-gray-100 flex-shrink-0">
-        {/* Floor tabs — horizontal scroll, no wrap */}
         <div className="flex items-center gap-1.5 px-3 pt-2.5 pb-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           <span className="text-xs font-semibold text-gray-400 flex-shrink-0 mr-1">Floor</span>
           {floors.map((f) => (
@@ -98,17 +98,10 @@ export default function FloorMap() {
             <span className="text-xs text-gray-400">No floors yet. Upload one in Admin.</span>
           )}
         </div>
-        {/* Legend row */}
         <div className="flex gap-4 px-3 pb-2 text-[11px] text-gray-400">
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-green-600 flex-shrink-0" />Available
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-red-600 flex-shrink-0" />Booked
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-purple-600 flex-shrink-0" />Restricted
-          </span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-600 flex-shrink-0" />Available</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-600 flex-shrink-0" />Booked</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-600 flex-shrink-0" />Restricted</span>
         </div>
       </div>
 
@@ -130,9 +123,8 @@ export default function FloorMap() {
             pinch={{ step: 5 }}
             wheel={{ step: 0.2 }}
           >
-            {({ zoomIn, zoomOut, resetTransform }) => (
+            {({ zoomIn, zoomOut, resetTransform, state }) => (
               <div className="w-full h-full relative">
-                {/* Zoom controls */}
                 <div className="absolute top-3 right-3 z-50 flex flex-col bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
                   <button type="button" onClick={() => zoomIn()} className="w-9 h-9 flex items-center justify-center text-lg text-gray-600 hover:bg-gray-50 border-b border-gray-100 active:bg-gray-100">+</button>
                   <button type="button" onClick={() => zoomOut()} className="w-9 h-9 flex items-center justify-center text-lg text-gray-600 hover:bg-gray-50 border-b border-gray-100 active:bg-gray-100">−</button>
@@ -156,7 +148,8 @@ export default function FloorMap() {
                           position: 'absolute',
                           left: `${d.xPosition / 10}%`,
                           top: `${d.yPosition / 10}%`,
-                          transform: 'translate(-50%, -50%)',
+                          transform: `translate(-50%, -50%) scale(${1 / state.scale})`,
+                          transformOrigin: 'center center',
                           cursor: 'pointer',
                           zIndex: 20,
                         }}
@@ -164,12 +157,14 @@ export default function FloorMap() {
                       >
                         <div
                           style={{
-                            width: selected?.id === d.id ? 16 : 12,
-                            height: selected?.id === d.id ? 16 : 12,
+                            width: selected?.id === d.id ? 14 : 10,
+                            height: selected?.id === d.id ? 14 : 10,
                             borderRadius: '50%',
                             background: pinColor(d),
-                            boxShadow: selected?.id === d.id ? '0 0 0 3px rgba(255,255,255,0.9), 0 0 0 5px ' + pinColor(d) : '0 0 0 2px rgba(255,255,255,0.8)',
-                            transition: 'all 0.15s',
+                            boxShadow: selected?.id === d.id
+                              ? '0 0 0 3px rgba(255,255,255,0.9), 0 0 0 5px ' + pinColor(d)
+                              : '0 0 0 2px rgba(255,255,255,0.8)',
+                            transition: 'width 0.15s, height 0.15s',
                           }}
                         />
                       </div>
@@ -182,7 +177,7 @@ export default function FloorMap() {
         )}
       </div>
 
-      {/* Booking success toast */}
+      {/* Toast */}
       {msg && (
         <div className="flex-shrink-0 px-4 py-2.5 bg-green-50 border-t border-green-100 text-sm text-green-800 text-center">
           {msg}
@@ -205,7 +200,7 @@ export default function FloorMap() {
               ) : (
                 <button
                   onClick={book}
-                  className="px-4 py-2 bg-[#1e3a5f] text-white rounded-full text-sm font-medium hover:bg-[#16304d] active:scale-95 transition-transform"
+                  className="px-4 py-2 bg-[#1e3a5f] text-white rounded-full text-sm font-semibold hover:bg-[#16304d] active:scale-95 transition-transform"
                 >
                   Book Today
                 </button>
