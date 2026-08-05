@@ -19,8 +19,10 @@ type Desk = {
 type Option = { id: number; category: string; value: string };
 type Location = { id: number; country: string; city: string; building: string; floor: string };
 
-const EMPTY: Omit<Desk, 'id' | 'xPosition' | 'yPosition'> = {
-  name: '', zone: '', floorId: '', buildingId: '',
+type FormData = Omit<Desk, 'xPosition' | 'yPosition'> & { country: string; city: string };
+
+const EMPTY: FormData = {
+  id: 0, name: '', zone: '', country: '', city: '', floorId: '', buildingId: '',
   active: true, restricted: false,
   hasMonitor: false, hasKeyboard: false, hasPedestal: false,
 };
@@ -41,8 +43,8 @@ export default function DesksPage() {
   const [msg, setMsg] = useState('');
   const [search, setSearch] = useState('');
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ ...EMPTY });
-  const [editDesk, setEditDesk] = useState<Desk | null>(null);
+  const [form, setForm] = useState<FormData>({ ...EMPTY });
+  const [editDesk, setEditDesk] = useState<FormData | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
   function flash(m: string) { setMsg(m); setTimeout(() => setMsg(''), 3000); }
@@ -58,17 +60,21 @@ export default function DesksPage() {
   }, []);
 
   const zones = opts.filter((o) => o.category === 'zone').map((o) => o.value);
-  const buildings = locations.map((l) => l.building).filter((v, i, a) => v && a.indexOf(v) === i);
-  function floorsForBuilding(b: string) {
-    return locations.filter((l) => l.building === b).map((l) => l.floor).filter((v, i, a) => v && a.indexOf(v) === i);
-  }
+
+  function unique(arr: string[]) { return arr.filter((v, i, a) => v && a.indexOf(v) === i); }
+  const countries = unique(locations.map((l) => l.country));
+  function citiesFor(country: string) { return unique(locations.filter((l) => l.country === country).map((l) => l.city)); }
+  function buildingsFor(country: string, city: string) { return unique(locations.filter((l) => l.country === country && l.city === city).map((l) => l.building)); }
+  function floorsFor(country: string, city: string, building: string) { return unique(locations.filter((l) => l.country === country && l.city === city && l.building === building).map((l) => l.floor)); }
 
   async function addDesk() {
     if (!form.name.trim()) { flash('Name is required'); return; }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id, country, city, ...deskData } = form;
     const res = await fetch('/api/desks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, xPosition: 0, yPosition: 0 }),
+      body: JSON.stringify({ ...deskData, xPosition: 0, yPosition: 0 }),
     });
     if (res.ok) { flash('Desk added'); setForm({ ...EMPTY }); setShowAdd(false); load(); }
     else flash('Failed to add desk');
@@ -76,14 +82,12 @@ export default function DesksPage() {
 
   async function saveEdit() {
     if (!editDesk || !editDesk.name.trim()) { flash('Name is required'); return; }
-    const res = await fetch('/api/desks/' + editDesk.id, {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id, country, city, ...deskData } = editDesk;
+    const res = await fetch('/api/desks/' + id, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: editDesk.name, zone: editDesk.zone, floorId: editDesk.floorId,
-        buildingId: editDesk.buildingId, active: editDesk.active, restricted: editDesk.restricted,
-        hasMonitor: editDesk.hasMonitor, hasKeyboard: editDesk.hasKeyboard, hasPedestal: editDesk.hasPedestal,
-      }),
+      body: JSON.stringify(deskData),
     });
     if (res.ok) { flash('Saved'); setEditDesk(null); load(); }
     else flash('Failed to save');
@@ -114,10 +118,9 @@ export default function DesksPage() {
   const selCls = inputCls;
 
   function DeskForm({ data, onChange }: {
-    data: typeof EMPTY;
+    data: FormData;
     onChange: (k: string, v: string | boolean) => void;
   }) {
-    const floorOpts = floorsForBuilding(data.buildingId);
     return (
       <div className="space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -133,18 +136,35 @@ export default function DesksPage() {
             </select>
           </div>
           <div>
+            <label className="text-xs text-gray-500 font-medium block mb-1">Country</label>
+            <select className={selCls} value={data.country}
+              onChange={(e) => { onChange('country', e.target.value); onChange('city', ''); onChange('buildingId', ''); onChange('floorId', ''); }}>
+              <option value="">Select country…</option>
+              {countries.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 font-medium block mb-1">City</label>
+            <select className={selCls} value={data.city} disabled={!data.country}
+              onChange={(e) => { onChange('city', e.target.value); onChange('buildingId', ''); onChange('floorId', ''); }}>
+              <option value="">Select city…</option>
+              {citiesFor(data.country).map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
             <label className="text-xs text-gray-500 font-medium block mb-1">Building</label>
-            <select className={selCls} value={data.buildingId}
+            <select className={selCls} value={data.buildingId} disabled={!data.city}
               onChange={(e) => { onChange('buildingId', e.target.value); onChange('floorId', ''); }}>
               <option value="">Select building…</option>
-              {buildings.map((b) => <option key={b} value={b}>{b}</option>)}
+              {buildingsFor(data.country, data.city).map((b) => <option key={b} value={b}>{b}</option>)}
             </select>
           </div>
           <div>
             <label className="text-xs text-gray-500 font-medium block mb-1">Floor</label>
-            <select className={selCls} value={data.floorId} onChange={(e) => onChange('floorId', e.target.value)} disabled={!data.buildingId}>
+            <select className={selCls} value={data.floorId} disabled={!data.buildingId}
+              onChange={(e) => onChange('floorId', e.target.value)}>
               <option value="">Select floor…</option>
-              {floorOpts.map((f) => <option key={f} value={f}>{f}</option>)}
+              {floorsFor(data.country, data.city, data.buildingId).map((f) => <option key={f} value={f}>{f}</option>)}
             </select>
           </div>
         </div>
@@ -204,7 +224,7 @@ export default function DesksPage() {
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <Toggle value={d.active} onChange={() => toggleActive(d)} />
-              <button onClick={() => setEditDesk({ ...d })} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Edit</button>
+              <button onClick={() => setEditDesk({ ...d, country: '', city: '' })} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Edit</button>
               <button onClick={() => setDeleteId(d.id)} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-600 hover:bg-red-100">Delete</button>
             </div>
           </div>
