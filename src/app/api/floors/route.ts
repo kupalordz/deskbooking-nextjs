@@ -17,6 +17,7 @@ export async function POST(request: Request) {
       floorId: body.floorId,
       name: body.name,
       imageUrl: body.imageUrl,
+      isParking: body.isParking ?? false,
     },
   });
   return NextResponse.json(floor);

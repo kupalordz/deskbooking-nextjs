@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 
-type Floor = { id: number; floorId: string; name: string; imageUrl: string };
+type Floor = { id: number; floorId: string; name: string; imageUrl: string; isParking: boolean };
 type Desk = {
   id: number;
   name: string;
@@ -41,6 +41,7 @@ export default function FloorPlanBuilder() {
   const [newFloorId, setNewFloorId] = useState('');
   const [newFloorName, setNewFloorName] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isParking, setIsParking] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Floor | null>(null);
 
@@ -87,12 +88,13 @@ export default function FloorPlanBuilder() {
     const floorRes = await fetch('/api/floors', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ floorId: newFloorId, name: newFloorName, imageUrl: url }),
+      body: JSON.stringify({ floorId: newFloorId, name: newFloorName, imageUrl: url, isParking }),
     });
     const floor = await floorRes.json();
     setUploading(false);
     setMsg('Floor plan uploaded successfully');
     setSelectedFile(null);
+    setIsParking(false);
     setLocCountry('');
     setLocCity('');
     setLocBuilding('');
@@ -274,7 +276,17 @@ export default function FloorPlanBuilder() {
                 {selectedFile && <p className="text-xs text-gray-400 mt-1 truncate">{selectedFile.name}</p>}
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4 flex-wrap">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <button
+                  type="button"
+                  onClick={() => setIsParking((v) => !v)}
+                  className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${isParking ? 'bg-orange-500' : 'bg-gray-200'}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isParking ? 'translate-x-4' : ''}`} />
+                </button>
+                <span className="text-sm text-gray-600">Parking floor</span>
+              </label>
               <button
                 onClick={handleUpload}
                 disabled={uploading}
@@ -339,7 +351,22 @@ export default function FloorPlanBuilder() {
         </div>
       )}
 
-      {selectedFloor && (
+      {selectedFloor && selectedFloor.isParking && (
+        <div className="bg-orange-50 border border-orange-200 rounded-2xl p-8 text-center">
+          <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-4">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+              <rect x="1" y="3" width="15" height="13" rx="2" /><path d="M16 8h4l3 5v3h-7V8z" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" />
+            </svg>
+          </div>
+          <p className="font-semibold text-orange-900 mb-1">This is a parking floor</p>
+          <p className="text-sm text-orange-700 mb-4">Desk pins cannot be placed on parking floors. Use the Parking Spot Builder to assign spots to this map.</p>
+          <a href="/admin/parking" className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600">
+            Go to Parking Spot Builder
+          </a>
+        </div>
+      )}
+
+      {selectedFloor && !selectedFloor.isParking && (
         <div className="flex gap-5 flex-col lg:flex-row">
           {/* Map */}
           <div className="flex-1 bg-white rounded-2xl p-4 shadow-sm ring-1 ring-gray-100">

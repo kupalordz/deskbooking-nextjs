@@ -16,6 +16,7 @@ export async function GET() {
     `ALTER TABLE "ParkingSpot" ADD COLUMN "floorId" TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE "ParkingSpot" ADD COLUMN "xPosition" REAL NOT NULL DEFAULT 0`,
     `ALTER TABLE "ParkingSpot" ADD COLUMN "yPosition" REAL NOT NULL DEFAULT 0`,
+    `ALTER TABLE "Floor" ADD COLUMN "isParking" INTEGER NOT NULL DEFAULT 0`,
   ];
 
   const results: string[] = [];

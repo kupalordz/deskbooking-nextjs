@@ -36,10 +36,11 @@ model Booking {
 }
 
 model Floor {
-  id       Int    @id @default(autoincrement())
-  floorId  String @unique
-  name     String
-  imageUrl String
+  id        Int     @id @default(autoincrement())
+  floorId   String  @unique
+  name      String
+  imageUrl  String
+  isParking Boolean @default(false)
 }
 
 model DropdownOption {

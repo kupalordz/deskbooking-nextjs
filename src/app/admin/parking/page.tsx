@@ -17,7 +17,7 @@ type ParkingSpot = {
   yPosition: number;
 };
 
-type Floor = { id: number; floorId: string; name: string; imageUrl: string };
+type Floor = { id: number; floorId: string; name: string; imageUrl: string; isParking: boolean };
 type Location = { id: number; country: string; city: string; building: string; floor: string };
 
 type FormData = Omit<ParkingSpot, 'id' | 'active'>;
@@ -131,7 +131,7 @@ export default function AdminParkingPage() {
   useEffect(() => {
     load();
     fetch('/api/floors').then((r) => r.json()).then((d) => {
-      const list = Array.isArray(d) ? d : [];
+      const list = (Array.isArray(d) ? d : []).filter((f: Floor) => f.isParking);
       setFloors(list);
       if (list.length > 0) setMapFloorId(list[0].floorId);
     });
@@ -278,7 +278,7 @@ export default function AdminParkingPage() {
         <div className="relative bg-gray-50" style={{ minHeight: 300 }}>
           {!currentMapFloor && (
             <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
-              {floors.length === 0 ? 'No floor maps available. Upload one in Floor Plans.' : 'Select a floor above.'}
+              {floors.length === 0 ? 'No parking floor maps yet. Upload one in Floor Plans with "Parking floor" enabled.' : 'Select a floor above.'}
             </div>
           )}
 
