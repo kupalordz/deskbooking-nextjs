@@ -42,6 +42,7 @@ export default function FloorPlanBuilder() {
   const [newFloorName, setNewFloorName] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Floor | null>(null);
 
   function loadFloors() {
     fetch('/api/floors').then((r) => r.json()).then((d) => setFloors(Array.isArray(d) ? d : []));
@@ -169,6 +170,17 @@ export default function FloorPlanBuilder() {
     });
   }
 
+  async function confirmDeleteFloor() {
+    if (!deleteTarget) return;
+    await fetch('/api/floors/' + deleteTarget.id, { method: 'DELETE' });
+    setDeleteTarget(null);
+    if (selectedFloor?.id === deleteTarget.id) setSelectedFloor(null);
+    setMsg('Floor plan deleted');
+    setTimeout(() => setMsg(''), 3000);
+    loadFloors();
+    loadAllDesks();
+  }
+
   const pickedDesk = allDesks.find((d) => d.id === Number(pickedDeskId));
 
   // Desks already placed on this floor (to exclude from picker or mark them)
@@ -279,13 +291,53 @@ export default function FloorPlanBuilder() {
       {/* Floor selector */}
       <div className="flex gap-2 flex-wrap mb-6">
         {floors.map((f) => (
-          <button key={f.id} onClick={() => selectFloor(f)}
-            className={`px-3 py-1.5 rounded-full border text-sm ${selectedFloor?.id === f.id ? 'bg-[#1e3a5f] text-white border-[#1e3a5f]' : 'bg-white text-gray-700 border-gray-200'}`}>
-            {f.name}
-          </button>
+          <div key={f.id} className="flex items-center group">
+            <button onClick={() => selectFloor(f)}
+              className={`px-3 py-1.5 rounded-l-full border text-sm ${selectedFloor?.id === f.id ? 'bg-[#1e3a5f] text-white border-[#1e3a5f]' : 'bg-white text-gray-700 border-gray-200'}`}>
+              {f.name}
+            </button>
+            <button
+              onClick={() => setDeleteTarget(f)}
+              title="Delete floor plan"
+              className={`px-2 py-1.5 rounded-r-full border-y border-r text-sm leading-none transition-colors ${selectedFloor?.id === f.id ? 'bg-[#1e3a5f] border-[#1e3a5f] text-white/60 hover:text-white hover:bg-red-600 hover:border-red-600' : 'bg-white border-gray-200 text-gray-300 hover:text-red-500 hover:border-red-300'}`}>
+              ×
+            </button>
+          </div>
         ))}
         {floors.length === 0 && <p className="text-sm text-gray-400">No floor plans uploaded yet.</p>}
       </div>
+
+      {/* Delete floor warning modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
+            <h3 className="font-bold text-gray-900 mb-1">Delete floor plan?</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              You are about to delete <span className="font-semibold text-gray-800">{deleteTarget.name}</span>.
+            </p>
+            <div className="bg-amber-50 rounded-xl p-3 mb-5 text-xs text-amber-800 space-y-1">
+              <p className="font-semibold mb-1">This will also:</p>
+              <p>• Remove all desk pins placed on this floor map</p>
+              <p>• Clear the floor assignment on {allDesks.filter((d) => d.floorId === deleteTarget.floorId).length} desk(s)</p>
+              <p>• The image URL will no longer be accessible from the app</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteFloor}
+                className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedFloor && (
         <div className="flex gap-5 flex-col lg:flex-row">
