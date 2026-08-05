@@ -14,20 +14,32 @@ type Desk = {
   hasKeyboard: boolean;
   hasPedestal: boolean;
 };
+type Option = { id: number; category: string; value: string };
+
+function slugify(s: string) {
+  return s.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
 
 export default function FloorPlanBuilder() {
   const [floors, setFloors] = useState<Floor[]>([]);
   const [selectedFloor, setSelectedFloor] = useState<Floor | null>(null);
   const [floorDesks, setFloorDesks] = useState<Desk[]>([]);
   const [allDesks, setAllDesks] = useState<Desk[]>([]);
+  const [dropdownOptions, setDropdownOptions] = useState<Option[]>([]);
   const [msg, setMsg] = useState('');
-  const [newFloorId, setNewFloorId] = useState('');
-  const [newFloorName, setNewFloorName] = useState('');
   const [uploading, setUploading] = useState(false);
   const [dragId, setDragId] = useState<number | null>(null);
   const [pendingPos, setPendingPos] = useState<{ x: number; y: number } | null>(null);
   const [pickedDeskId, setPickedDeskId] = useState<string>('');
   const imgRef = useRef<HTMLDivElement>(null);
+
+  // Upload form location fields
+  const [locCountry, setLocCountry] = useState('');
+  const [locCity, setLocCity] = useState('');
+  const [locBuilding, setLocBuilding] = useState('');
+  const [locFloor, setLocFloor] = useState('');
+  const [newFloorId, setNewFloorId] = useState('');
+  const [newFloorName, setNewFloorName] = useState('');
 
   function loadFloors() {
     fetch('/api/floors').then((r) => r.json()).then((d) => setFloors(Array.isArray(d) ? d : []));
@@ -43,11 +55,25 @@ export default function FloorPlanBuilder() {
     });
   }
 
-  useEffect(() => { loadFloors(); loadAllDesks(); }, []);
+  function loadDropdownOptions() {
+    fetch('/api/dropdown-options').then((r) => r.json()).then((d) => setDropdownOptions(Array.isArray(d) ? d : []));
+  }
+
+  useEffect(() => { loadFloors(); loadAllDesks(); loadDropdownOptions(); }, []);
+
+  useEffect(() => {
+    if (locBuilding && locFloor) {
+      setNewFloorId(slugify(locBuilding) + '-' + slugify(locFloor));
+      setNewFloorName(locBuilding + ' · ' + locFloor);
+    }
+  }, [locBuilding, locFloor]);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !newFloorId || !newFloorName) { setMsg('Enter Floor ID and Name before choosing a file'); return; }
+    if (!file || !locCountry || !locCity || !locBuilding || !locFloor) {
+      setMsg('Please select Country, City, Building and Floor before uploading');
+      return;
+    }
     setUploading(true);
     const formData = new FormData();
     formData.append('file', file);
@@ -61,6 +87,10 @@ export default function FloorPlanBuilder() {
     const floor = await floorRes.json();
     setUploading(false);
     setMsg('Floor plan uploaded');
+    setLocCountry('');
+    setLocCity('');
+    setLocBuilding('');
+    setLocFloor('');
     setNewFloorId('');
     setNewFloorName('');
     loadFloors();
@@ -159,10 +189,61 @@ export default function FloorPlanBuilder() {
       {/* Upload */}
       <div className="bg-white rounded-2xl p-5 md:p-6 mb-6 shadow-sm ring-1 ring-gray-100">
         <h3 className="text-sm font-semibold text-gray-900 mb-4">Upload new floor plan</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+          <div>
+            <label className="text-xs text-gray-500 font-medium block mb-1">Country</label>
+            <select value={locCountry} onChange={(e) => { setLocCountry(e.target.value); setLocCity(''); setLocBuilding(''); setLocFloor(''); }}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+              <option value="">Select…</option>
+              {dropdownOptions.filter((o) => o.category === 'country').map((o) => (
+                <option key={o.id} value={o.value}>{o.value}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 font-medium block mb-1">City</label>
+            <select value={locCity} onChange={(e) => { setLocCity(e.target.value); setLocBuilding(''); setLocFloor(''); }}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" disabled={!locCountry}>
+              <option value="">Select…</option>
+              {dropdownOptions.filter((o) => o.category === 'city').map((o) => (
+                <option key={o.id} value={o.value}>{o.value}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 font-medium block mb-1">Building</label>
+            <select value={locBuilding} onChange={(e) => { setLocBuilding(e.target.value); setLocFloor(''); }}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" disabled={!locCity}>
+              <option value="">Select…</option>
+              {dropdownOptions.filter((o) => o.category === 'building').map((o) => (
+                <option key={o.id} value={o.value}>{o.value}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 font-medium block mb-1">Floor</label>
+            <select value={locFloor} onChange={(e) => setLocFloor(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" disabled={!locBuilding}>
+              <option value="">Select…</option>
+              {dropdownOptions.filter((o) => o.category === 'floor').map((o) => (
+                <option key={o.id} value={o.value}>{o.value}</option>
+              ))}
+            </select>
+          </div>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-          <input className="px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Floor ID (e.g. floor-4)" value={newFloorId} onChange={(e) => setNewFloorId(e.target.value)} />
-          <input className="px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Floor name (e.g. HQ - Level 4)" value={newFloorName} onChange={(e) => setNewFloorName(e.target.value)} />
-          <input type="file" accept="image/*" onChange={handleUpload} className="text-sm" />
+          <div>
+            <label className="text-xs text-gray-500 font-medium block mb-1">Floor ID</label>
+            <input className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Auto-filled" value={newFloorId} onChange={(e) => setNewFloorId(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 font-medium block mb-1">Floor Name</label>
+            <input className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Auto-filled" value={newFloorName} onChange={(e) => setNewFloorName(e.target.value)} />
+          </div>
+          <div className="flex flex-col justify-end">
+            <label className="text-xs text-gray-500 font-medium block mb-1">Floor Plan Image</label>
+            <input type="file" accept="image/*" onChange={handleUpload} className="text-sm" />
+          </div>
         </div>
         {uploading && <p className="text-sm text-gray-500">Uploading...</p>}
       </div>
