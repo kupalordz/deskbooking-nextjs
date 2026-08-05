@@ -1,14 +1,13 @@
-import { createClient } from '@libsql/client';
+import { PrismaClient } from '@prisma/client';
+import { PrismaLibSql } from '@prisma/adapter-libsql';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
-  const client = createClient({
-    url: process.env.TURSO_DATABASE_URL!,
-    authToken: process.env.TURSO_AUTH_TOKEN,
-  });
+const adapter = new PrismaLibSql({ url: process.env.DATABASE_URL! });
+const prisma = new PrismaClient({ adapter });
 
+export async function GET() {
   const stmts = [
     `ALTER TABLE "ParkingSpot" ADD COLUMN "country" TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE "ParkingSpot" ADD COLUMN "city" TEXT NOT NULL DEFAULT ''`,
@@ -22,11 +21,11 @@ export async function GET() {
   const results: string[] = [];
   for (const sql of stmts) {
     try {
-      await client.execute(sql);
+      await prisma.$executeRawUnsafe(sql);
       results.push(`OK: ${sql.slice(0, 60)}`);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      if (msg.includes('duplicate column')) {
+      if (msg.toLowerCase().includes('duplicate column') || msg.toLowerCase().includes('already exists')) {
         results.push(`SKIP (already exists): ${sql.slice(0, 60)}`);
       } else {
         results.push(`ERR: ${msg}`);
