@@ -75,25 +75,44 @@ export default function FloorMap() {
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 56px)' }}>
-      <div className="px-4 sm:px-6 py-3 bg-white border-b border-gray-200 flex gap-2 items-center flex-wrap">
-        <span className="text-sm font-medium text-gray-700 mr-2 whitespace-nowrap">Floor:</span>
-        {floors.map((f) => (
-          <button
-            key={f.floorId}
-            onClick={() => { setFloor(f.floorId); setSelected(null); }}
-            className={`px-3 py-1 rounded-full border text-sm whitespace-nowrap ${floor === f.floorId ? 'bg-[#1e3a5f] text-white border-[#1e3a5f]' : 'bg-white text-gray-700 border-gray-200'}`}
-          >
-            {f.name}
-          </button>
-        ))}
-        {floors.length === 0 && <span className="text-sm text-gray-400">No floors yet. Upload one in Admin.</span>}
-        <div className="flex gap-3 sm:gap-4 text-xs text-gray-500 items-center flex-wrap sm:ml-auto">
-          <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-2.5 h-2.5 rounded-full bg-green-600 inline-block flex-shrink-0"></span>Available</span>
-          <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-2.5 h-2.5 rounded-full bg-red-600 inline-block flex-shrink-0"></span>Booked</span>
-          <span className="flex items-center gap-1 whitespace-nowrap"><span className="w-2.5 h-2.5 rounded-full bg-purple-600 inline-block flex-shrink-0"></span>Restricted</span>
+
+      {/* Header: floor tabs + legend */}
+      <div className="bg-white border-b border-gray-100 flex-shrink-0">
+        {/* Floor tabs — horizontal scroll, no wrap */}
+        <div className="flex items-center gap-1.5 px-3 pt-2.5 pb-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          <span className="text-xs font-semibold text-gray-400 flex-shrink-0 mr-1">Floor</span>
+          {floors.map((f) => (
+            <button
+              key={f.floorId}
+              onClick={() => { setFloor(f.floorId); setSelected(null); }}
+              className={`px-3 py-1 rounded-full border text-xs font-medium whitespace-nowrap flex-shrink-0 transition-colors ${
+                floor === f.floorId
+                  ? 'bg-[#1e3a5f] text-white border-[#1e3a5f]'
+                  : 'bg-white text-gray-600 border-gray-200'
+              }`}
+            >
+              {f.name}
+            </button>
+          ))}
+          {floors.length === 0 && (
+            <span className="text-xs text-gray-400">No floors yet. Upload one in Admin.</span>
+          )}
+        </div>
+        {/* Legend row */}
+        <div className="flex gap-4 px-3 pb-2 text-[11px] text-gray-400">
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-green-600 flex-shrink-0" />Available
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-red-600 flex-shrink-0" />Booked
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-purple-600 flex-shrink-0" />Restricted
+          </span>
         </div>
       </div>
 
+      {/* Map area */}
       <div className="flex-1 relative bg-gray-50 overflow-hidden">
         {!currentFloor && (
           <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
@@ -104,8 +123,8 @@ export default function FloorMap() {
         {currentFloor && (
           <TransformWrapper
             initialScale={1}
-            minScale={0.5}
-            maxScale={5}
+            minScale={0.3}
+            maxScale={6}
             centerOnInit
             doubleClick={{ mode: 'zoomIn', step: 0.7 }}
             pinch={{ step: 5 }}
@@ -113,10 +132,11 @@ export default function FloorMap() {
           >
             {({ zoomIn, zoomOut, resetTransform }) => (
               <div className="w-full h-full relative">
-                <div className="absolute top-3 right-3 z-50 flex flex-col gap-1 bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
-                  <button type="button" onClick={() => zoomIn()} className="w-10 h-10 flex items-center justify-center text-xl text-gray-700 hover:bg-gray-50 border-b border-gray-200">+</button>
-                  <button type="button" onClick={() => zoomOut()} className="w-10 h-10 flex items-center justify-center text-xl text-gray-700 hover:bg-gray-50 border-b border-gray-200">-</button>
-                  <button type="button" onClick={() => resetTransform()} className="w-10 h-10 flex items-center justify-center text-[10px] text-gray-700 hover:bg-gray-50">Reset</button>
+                {/* Zoom controls */}
+                <div className="absolute top-3 right-3 z-50 flex flex-col bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+                  <button type="button" onClick={() => zoomIn()} className="w-9 h-9 flex items-center justify-center text-lg text-gray-600 hover:bg-gray-50 border-b border-gray-100 active:bg-gray-100">+</button>
+                  <button type="button" onClick={() => zoomOut()} className="w-9 h-9 flex items-center justify-center text-lg text-gray-600 hover:bg-gray-50 border-b border-gray-100 active:bg-gray-100">−</button>
+                  <button type="button" onClick={() => resetTransform()} className="w-9 h-8 flex items-center justify-center text-[9px] font-medium text-gray-400 hover:bg-gray-50 active:bg-gray-100 uppercase tracking-wide">Fit</button>
                 </div>
 
                 <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: '100%' }}>
@@ -144,11 +164,12 @@ export default function FloorMap() {
                       >
                         <div
                           style={{
-                            position: 'relative',
-                            width: selected?.id === d.id ? '14px' : '11px',
-                            height: selected?.id === d.id ? '14px' : '11px',
+                            width: selected?.id === d.id ? 16 : 12,
+                            height: selected?.id === d.id ? 16 : 12,
                             borderRadius: '50%',
                             background: pinColor(d),
+                            boxShadow: selected?.id === d.id ? '0 0 0 3px rgba(255,255,255,0.9), 0 0 0 5px ' + pinColor(d) : '0 0 0 2px rgba(255,255,255,0.8)',
+                            transition: 'all 0.15s',
                           }}
                         />
                       </div>
@@ -161,20 +182,41 @@ export default function FloorMap() {
         )}
       </div>
 
-      {msg && <div className="px-4 sm:px-6 py-3 bg-green-50 border-t border-green-200 text-sm text-green-800">{msg}</div>}
+      {/* Booking success toast */}
+      {msg && (
+        <div className="flex-shrink-0 px-4 py-2.5 bg-green-50 border-t border-green-100 text-sm text-green-800 text-center">
+          {msg}
+        </div>
+      )}
 
+      {/* Desk detail bottom sheet */}
       {selected && (
-        <div className="bg-white border-t border-gray-200 px-4 sm:px-6 py-4 flex justify-between items-center gap-4 flex-wrap">
-          <div>
-            <p className="font-semibold">{selected.name}</p>
-            <p className="text-sm text-gray-500">Zone: {selected.zone} - Floor: {selected.floorId}</p>
-          </div>
-          <div className="flex gap-2">
-            {!bookedIds.includes(selected.id) && (
-              <button onClick={book} className="px-5 py-2.5 bg-[#1e3a5f] text-white rounded-lg font-medium hover:bg-[#16304d]">Book Today</button>
-            )}
-            {bookedIds.includes(selected.id) && <span className="text-red-600 font-medium text-sm">Already booked</span>}
-            <button onClick={() => setSelected(null)} className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Close</button>
+        <div className="flex-shrink-0 bg-white border-t border-gray-200 shadow-lg">
+          <div className="flex items-center justify-between gap-3 px-4 py-3">
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-gray-900 text-sm truncate">{selected.name}</p>
+              <p className="text-xs text-gray-400 truncate">
+                {selected.zone ? selected.zone + ' · ' : ''}{selected.floorId}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {bookedIds.includes(selected.id) ? (
+                <span className="text-xs font-medium text-red-600 bg-red-50 px-3 py-1.5 rounded-full">Already booked</span>
+              ) : (
+                <button
+                  onClick={book}
+                  className="px-4 py-2 bg-[#1e3a5f] text-white rounded-full text-sm font-medium hover:bg-[#16304d] active:scale-95 transition-transform"
+                >
+                  Book Today
+                </button>
+              )}
+              <button
+                onClick={() => setSelected(null)}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 active:scale-95 text-lg leading-none"
+              >
+                ×
+              </button>
+            </div>
           </div>
         </div>
       )}
