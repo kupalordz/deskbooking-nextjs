@@ -28,6 +28,75 @@ const EMPTY: FormData = {
   xPosition: 0, yPosition: 0,
 };
 
+const inputCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] bg-white';
+
+function unique(arr: string[]) { return arr.filter((v, i, a) => v && a.indexOf(v) === i); }
+
+function SpotForm({ data, onChange, locations }: {
+  data: FormData;
+  onChange: (k: string, v: string) => void;
+  locations: Location[];
+}) {
+  const countries = unique(locations.map((l) => l.country));
+  const cities = unique(locations.filter((l) => l.country === data.country).map((l) => l.city));
+  const buildings = unique(locations.filter((l) => l.country === data.country && l.city === data.city).map((l) => l.building));
+  const floors = unique(locations.filter((l) => l.country === data.country && l.city === data.city && l.building === data.building).map((l) => l.floor));
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs text-gray-500 font-medium block mb-1">Spot Name *</label>
+          <input className={inputCls} value={data.name} onChange={(e) => onChange('name', e.target.value)} placeholder="e.g. P-001" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 font-medium block mb-1">Type</label>
+          <select className={inputCls} value={data.type} onChange={(e) => onChange('type', e.target.value)}>
+            <option value="CAR">Car</option>
+            <option value="MOTORCYCLE">Motorcycle</option>
+          </select>
+        </div>
+        <div className="sm:col-span-2">
+          <label className="text-xs text-gray-500 font-medium block mb-1">Zone / Level</label>
+          <input className={inputCls} value={data.zone} onChange={(e) => onChange('zone', e.target.value)} placeholder="e.g. Level B1" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 font-medium block mb-1">Country</label>
+          <select className={inputCls} value={data.country}
+            onChange={(e) => { onChange('country', e.target.value); onChange('city', ''); onChange('building', ''); onChange('floor', ''); onChange('floorId', ''); }}>
+            <option value="">Select country…</option>
+            {countries.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 font-medium block mb-1">City</label>
+          <select className={inputCls} value={data.city} disabled={!data.country}
+            onChange={(e) => { onChange('city', e.target.value); onChange('building', ''); onChange('floor', ''); onChange('floorId', ''); }}>
+            <option value="">Select city…</option>
+            {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 font-medium block mb-1">Building</label>
+          <select className={inputCls} value={data.building} disabled={!data.city}
+            onChange={(e) => { onChange('building', e.target.value); onChange('floor', ''); onChange('floorId', ''); }}>
+            <option value="">Select building…</option>
+            {buildings.map((b) => <option key={b} value={b}>{b}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 font-medium block mb-1">Floor</label>
+          <select className={inputCls} value={data.floor} disabled={!data.building}
+            onChange={(e) => onChange('floor', e.target.value)}>
+            <option value="">Select floor…</option>
+            {floors.map((f) => <option key={f} value={f}>{f}</option>)}
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
     <button type="button" onClick={() => onChange(!value)}
@@ -68,12 +137,6 @@ export default function AdminParkingPage() {
     });
     fetch('/api/locations').then((r) => r.json()).then((d) => setLocations(Array.isArray(d) ? d : []));
   }, []);
-
-  function unique(arr: string[]) { return arr.filter((v, i, a) => v && a.indexOf(v) === i); }
-  const countries = unique(locations.map((l) => l.country));
-  function citiesFor(c: string) { return unique(locations.filter((l) => l.country === c).map((l) => l.city)); }
-  function buildingsFor(c: string, ci: string) { return unique(locations.filter((l) => l.country === c && l.city === ci).map((l) => l.building)); }
-  function floorsFor(c: string, ci: string, b: string) { return unique(locations.filter((l) => l.country === c && l.city === ci && l.building === b).map((l) => l.floor)); }
 
   async function addSpot() {
     if (!form.name.trim()) { flash('Name is required'); return; }
@@ -132,67 +195,6 @@ export default function AdminParkingPage() {
     s.zone.toLowerCase().includes(search.toLowerCase()) ||
     s.building.toLowerCase().includes(search.toLowerCase())
   );
-
-  const inputCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] bg-white';
-
-  function SpotForm({ data, onChange }: {
-    data: FormData;
-    onChange: (k: string, v: string) => void;
-  }) {
-    return (
-      <div className="space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">Spot Name *</label>
-            <input className={inputCls} value={data.name} onChange={(e) => onChange('name', e.target.value)} placeholder="e.g. P-001" />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">Type</label>
-            <select className={inputCls} value={data.type} onChange={(e) => onChange('type', e.target.value)}>
-              <option value="CAR">Car</option>
-              <option value="MOTORCYCLE">Motorcycle</option>
-            </select>
-          </div>
-          <div className="sm:col-span-2">
-            <label className="text-xs text-gray-500 font-medium block mb-1">Zone / Level</label>
-            <input className={inputCls} value={data.zone} onChange={(e) => onChange('zone', e.target.value)} placeholder="e.g. Level B1" />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">Country</label>
-            <select className={inputCls} value={data.country}
-              onChange={(e) => { onChange('country', e.target.value); onChange('city', ''); onChange('building', ''); onChange('floor', ''); onChange('floorId', ''); }}>
-              <option value="">Select country…</option>
-              {countries.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">City</label>
-            <select className={inputCls} value={data.city} disabled={!data.country}
-              onChange={(e) => { onChange('city', e.target.value); onChange('building', ''); onChange('floor', ''); onChange('floorId', ''); }}>
-              <option value="">Select city…</option>
-              {citiesFor(data.country).map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">Building</label>
-            <select className={inputCls} value={data.building} disabled={!data.city}
-              onChange={(e) => { onChange('building', e.target.value); onChange('floor', ''); onChange('floorId', ''); }}>
-              <option value="">Select building…</option>
-              {buildingsFor(data.country, data.city).map((b) => <option key={b} value={b}>{b}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">Floor</label>
-            <select className={inputCls} value={data.floor} disabled={!data.building}
-              onChange={(e) => onChange('floor', e.target.value)}>
-              <option value="">Select floor…</option>
-              {floorsFor(data.country, data.city, data.building).map((f) => <option key={f} value={f}>{f}</option>)}
-            </select>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-5 sm:p-7 md:p-8">
@@ -387,7 +389,7 @@ export default function AdminParkingPage() {
               <h3 className="font-bold text-gray-900">Add Parking Spot</h3>
               <button onClick={() => setShowAdd(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
             </div>
-            <SpotForm data={form} onChange={(k, v) => setForm((p) => ({ ...p, [k]: v }))} />
+            <SpotForm data={form} onChange={(k, v) => setForm((p) => ({ ...p, [k]: v }))} locations={locations} />
             <div className="flex gap-3 mt-5">
               <button onClick={() => setShowAdd(false)} className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
               <button onClick={addSpot} className="flex-1 px-4 py-2 rounded-lg bg-[#1a2535] text-white text-sm font-medium hover:bg-[#243148]">Add Spot</button>
@@ -407,6 +409,7 @@ export default function AdminParkingPage() {
             <SpotForm
               data={editSpot}
               onChange={(k, v) => setEditSpot((p) => p ? { ...p, [k]: v } : p)}
+              locations={locations}
             />
             <div className="flex gap-3 mt-5">
               <button onClick={() => setEditSpot(null)} className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">Cancel</button>

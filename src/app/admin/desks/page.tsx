@@ -27,12 +27,86 @@ const EMPTY: FormData = {
   hasMonitor: false, hasKeyboard: false, hasPedestal: false,
 };
 
+const inputCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a2535] bg-white';
+
+function unique(arr: string[]) { return arr.filter((v, i, a) => v && a.indexOf(v) === i); }
+
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
     <button type="button" onClick={() => onChange(!value)}
-      className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${value ? 'bg-[#1e3a5f]' : 'bg-gray-200'}`}>
+      className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${value ? 'bg-[#1a2535]' : 'bg-gray-200'}`}>
       <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${value ? 'translate-x-4' : ''}`} />
     </button>
+  );
+}
+
+function DeskForm({ data, onChange, zones, locations }: {
+  data: FormData;
+  onChange: (k: string, v: string | boolean) => void;
+  zones: string[];
+  locations: Location[];
+}) {
+  const countries = unique(locations.map((l) => l.country));
+  const cities = unique(locations.filter((l) => l.country === data.country).map((l) => l.city));
+  const buildings = unique(locations.filter((l) => l.country === data.country && l.city === data.city).map((l) => l.building));
+  const floors = unique(locations.filter((l) => l.country === data.country && l.city === data.city && l.building === data.buildingId).map((l) => l.floor));
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs text-gray-500 font-medium block mb-1">Desk Name *</label>
+          <input className={inputCls} value={data.name} onChange={(e) => onChange('name', e.target.value)} placeholder="e.g. A-01" />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 font-medium block mb-1">Zone</label>
+          <select className={inputCls} value={data.zone} onChange={(e) => onChange('zone', e.target.value)}>
+            <option value="">Select zone…</option>
+            {zones.map((z) => <option key={z} value={z}>{z}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 font-medium block mb-1">Country</label>
+          <select className={inputCls} value={data.country}
+            onChange={(e) => { onChange('country', e.target.value); onChange('city', ''); onChange('buildingId', ''); onChange('floorId', ''); }}>
+            <option value="">Select country…</option>
+            {countries.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 font-medium block mb-1">City</label>
+          <select className={inputCls} value={data.city} disabled={!data.country}
+            onChange={(e) => { onChange('city', e.target.value); onChange('buildingId', ''); onChange('floorId', ''); }}>
+            <option value="">Select city…</option>
+            {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 font-medium block mb-1">Building</label>
+          <select className={inputCls} value={data.buildingId} disabled={!data.city}
+            onChange={(e) => { onChange('buildingId', e.target.value); onChange('floorId', ''); }}>
+            <option value="">Select building…</option>
+            {buildings.map((b) => <option key={b} value={b}>{b}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 font-medium block mb-1">Floor</label>
+          <select className={inputCls} value={data.floorId} disabled={!data.buildingId}
+            onChange={(e) => onChange('floorId', e.target.value)}>
+            <option value="">Select floor…</option>
+            {floors.map((f) => <option key={f} value={f}>{f}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
+        {([['active', 'Active'], ['restricted', 'Restricted'], ['hasMonitor', 'Monitor'], ['hasKeyboard', 'Keyboard'], ['hasPedestal', 'Pedestal']] as [string, string][]).map(([key, label]) => (
+          <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
+            <Toggle value={data[key as keyof typeof EMPTY] as boolean} onChange={(v) => onChange(key, v)} />
+            <span className="text-sm text-gray-700">{label}</span>
+          </label>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -60,12 +134,6 @@ export default function DesksPage() {
   }, []);
 
   const zones = opts.filter((o) => o.category === 'zone').map((o) => o.value);
-
-  function unique(arr: string[]) { return arr.filter((v, i, a) => v && a.indexOf(v) === i); }
-  const countries = unique(locations.map((l) => l.country));
-  function citiesFor(country: string) { return unique(locations.filter((l) => l.country === country).map((l) => l.city)); }
-  function buildingsFor(country: string, city: string) { return unique(locations.filter((l) => l.country === country && l.city === city).map((l) => l.building)); }
-  function floorsFor(country: string, city: string, building: string) { return unique(locations.filter((l) => l.country === country && l.city === city && l.building === building).map((l) => l.floor)); }
 
   async function addDesk() {
     if (!form.name.trim()) { flash('Name is required'); return; }
@@ -114,72 +182,6 @@ export default function DesksPage() {
     d.floorId.toLowerCase().includes(search.toLowerCase())
   );
 
-  const inputCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1a2535] bg-white';
-  const selCls = inputCls;
-
-  function DeskForm({ data, onChange }: {
-    data: FormData;
-    onChange: (k: string, v: string | boolean) => void;
-  }) {
-    return (
-      <div className="space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">Desk Name *</label>
-            <input className={inputCls} value={data.name} onChange={(e) => onChange('name', e.target.value)} placeholder="e.g. A-01" />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">Zone</label>
-            <select className={selCls} value={data.zone} onChange={(e) => onChange('zone', e.target.value)}>
-              <option value="">Select zone…</option>
-              {zones.map((z) => <option key={z} value={z}>{z}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">Country</label>
-            <select className={selCls} value={data.country}
-              onChange={(e) => { onChange('country', e.target.value); onChange('city', ''); onChange('buildingId', ''); onChange('floorId', ''); }}>
-              <option value="">Select country…</option>
-              {countries.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">City</label>
-            <select className={selCls} value={data.city} disabled={!data.country}
-              onChange={(e) => { onChange('city', e.target.value); onChange('buildingId', ''); onChange('floorId', ''); }}>
-              <option value="">Select city…</option>
-              {citiesFor(data.country).map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">Building</label>
-            <select className={selCls} value={data.buildingId} disabled={!data.city}
-              onChange={(e) => { onChange('buildingId', e.target.value); onChange('floorId', ''); }}>
-              <option value="">Select building…</option>
-              {buildingsFor(data.country, data.city).map((b) => <option key={b} value={b}>{b}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">Floor</label>
-            <select className={selCls} value={data.floorId} disabled={!data.buildingId}
-              onChange={(e) => onChange('floorId', e.target.value)}>
-              <option value="">Select floor…</option>
-              {floorsFor(data.country, data.city, data.buildingId).map((f) => <option key={f} value={f}>{f}</option>)}
-            </select>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
-          {([['active', 'Active'], ['restricted', 'Restricted'], ['hasMonitor', 'Monitor'], ['hasKeyboard', 'Keyboard'], ['hasPedestal', 'Pedestal']] as [string, string][]).map(([key, label]) => (
-            <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
-              <Toggle value={data[key as keyof typeof EMPTY] as boolean} onChange={(v) => onChange(key, v)} />
-              <span className="text-sm text-gray-700">{label}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="p-5 sm:p-7 md:p-8">
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
@@ -195,12 +197,10 @@ export default function DesksPage() {
 
       {msg && <div className="p-3 bg-green-50 text-green-800 rounded-lg mb-4 text-sm">{msg}</div>}
 
-      {/* Search */}
       <div className="mb-4">
         <input className="w-full max-w-sm px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Search desks…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
-      {/* Desk list */}
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
         {filtered.length === 0 && (
           <div className="p-10 text-center text-gray-400 text-sm">No desks found. Add one to get started.</div>
@@ -231,7 +231,6 @@ export default function DesksPage() {
         ))}
       </div>
 
-      {/* Add modal */}
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -239,7 +238,7 @@ export default function DesksPage() {
               <h3 className="font-bold text-gray-900">Add Desk</h3>
               <button onClick={() => setShowAdd(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
             </div>
-            <DeskForm data={form} onChange={(k, v) => setForm((p) => ({ ...p, [k]: v }))} />
+            <DeskForm data={form} onChange={(k, v) => setForm((p) => ({ ...p, [k]: v }))} zones={zones} locations={locations} />
             <div className="flex gap-3 mt-5">
               <button onClick={() => setShowAdd(false)} className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
               <button onClick={addDesk} className="flex-1 px-4 py-2 rounded-lg bg-[#1a2535] text-white text-sm font-medium hover:bg-[#243148]">Add Desk</button>
@@ -248,7 +247,6 @@ export default function DesksPage() {
         </div>
       )}
 
-      {/* Edit modal */}
       {editDesk && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -259,6 +257,8 @@ export default function DesksPage() {
             <DeskForm
               data={editDesk}
               onChange={(k, v) => setEditDesk((p) => p ? { ...p, [k]: v } : p)}
+              zones={zones}
+              locations={locations}
             />
             <div className="flex gap-3 mt-5">
               <button onClick={() => setEditDesk(null)} className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
@@ -268,7 +268,6 @@ export default function DesksPage() {
         </div>
       )}
 
-      {/* Delete confirm */}
       {deleteId !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
