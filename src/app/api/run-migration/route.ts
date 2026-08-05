@@ -21,6 +21,9 @@ export async function GET() {
     `ALTER TABLE "Booking" ADD COLUMN "endTime" TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE "ParkingBooking" ADD COLUMN "startTime" TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE "ParkingBooking" ADD COLUMN "endTime" TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE "Desk" ADD COLUMN "pinWidth" INTEGER NOT NULL DEFAULT 16`,
+    `ALTER TABLE "Desk" ADD COLUMN "pinHeight" INTEGER NOT NULL DEFAULT 10`,
+    `ALTER TABLE "Desk" ADD COLUMN "pinRotation" INTEGER NOT NULL DEFAULT 0`,
   ];
 
   const results: string[] = [];

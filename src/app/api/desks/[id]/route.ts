@@ -32,6 +32,9 @@ export async function PATCH(
   if (body.hasMonitor !== undefined) data.hasMonitor = body.hasMonitor;
   if (body.hasKeyboard !== undefined) data.hasKeyboard = body.hasKeyboard;
   if (body.hasPedestal !== undefined) data.hasPedestal = body.hasPedestal;
+  if (body.pinWidth !== undefined) data.pinWidth = body.pinWidth;
+  if (body.pinHeight !== undefined) data.pinHeight = body.pinHeight;
+  if (body.pinRotation !== undefined) data.pinRotation = body.pinRotation;
   const desk = await prisma.desk.update({ where: { id: Number(id) }, data });
   return NextResponse.json(desk);
 }

@@ -19,6 +19,9 @@ model Desk {
   hasMonitor   Boolean   @default(false)
   hasKeyboard  Boolean   @default(false)
   hasPedestal  Boolean   @default(false)
+  pinWidth     Int       @default(16)
+  pinHeight    Int       @default(10)
+  pinRotation  Int       @default(0)
   bookings     Booking[]
 }
 

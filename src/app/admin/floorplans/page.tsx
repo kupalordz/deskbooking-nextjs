@@ -13,6 +13,9 @@ type Desk = {
   hasMonitor: boolean;
   hasKeyboard: boolean;
   hasPedestal: boolean;
+  pinWidth: number;
+  pinHeight: number;
+  pinRotation: number;
 };
 type Location = { country: string; city: string; building: string; floor: string };
 
@@ -31,9 +34,11 @@ export default function FloorPlanBuilder() {
   const [dragId, setDragId] = useState<number | null>(null);
   const [pendingPos, setPendingPos] = useState<{ x: number; y: number } | null>(null);
   const [pickedDeskId, setPickedDeskId] = useState<string>('');
+  const [selectedPinId, setSelectedPinId] = useState<number | null>(null);
+  const [editPin, setEditPin] = useState<{ w: number; h: number; r: number } | null>(null);
   const imgRef = useRef<HTMLDivElement>(null);
+  const hasMoved = useRef(false);
 
-  // Upload form location fields
   const [locCountry, setLocCountry] = useState('');
   const [locCity, setLocCity] = useState('');
   const [locBuilding, setLocBuilding] = useState('');
@@ -48,17 +53,14 @@ export default function FloorPlanBuilder() {
   function loadFloors() {
     fetch('/api/floors').then((r) => r.json()).then((d) => setFloors(Array.isArray(d) ? d : []));
   }
-
   function loadAllDesks() {
     fetch('/api/desks').then((r) => r.json()).then((d) => setAllDesks(Array.isArray(d) ? d : []));
   }
-
   function loadFloorDesks(floorId: string) {
     fetch('/api/desks').then((r) => r.json()).then((d) => {
       setFloorDesks(Array.isArray(d) ? d.filter((x: Desk) => x.floorId === floorId) : []);
     });
   }
-
   function loadLocations() {
     fetch('/api/locations').then((r) => r.json()).then((d) => setLocations(Array.isArray(d) ? d : []));
   }
@@ -74,13 +76,9 @@ export default function FloorPlanBuilder() {
 
   async function handleUpload() {
     if (!selectedFile) { setMsg('Please choose a floor plan image'); return; }
-    if (!locCountry || !locCity || !locBuilding || !locFloor) {
-      setMsg('Please select Country, City, Building and Floor');
-      return;
-    }
+    if (!locCountry || !locCity || !locBuilding || !locFloor) { setMsg('Please select Country, City, Building and Floor'); return; }
     if (!newFloorId || !newFloorName) { setMsg('Floor ID and Floor Name are required'); return; }
-    setUploading(true);
-    setMsg('');
+    setUploading(true); setMsg('');
     const formData = new FormData();
     formData.append('file', selectedFile);
     const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
@@ -93,14 +91,9 @@ export default function FloorPlanBuilder() {
     const floor = await floorRes.json();
     setUploading(false);
     setMsg('Floor plan uploaded successfully');
-    setSelectedFile(null);
-    setIsParking(false);
-    setLocCountry('');
-    setLocCity('');
-    setLocBuilding('');
-    setLocFloor('');
-    setNewFloorId('');
-    setNewFloorName('');
+    setSelectedFile(null); setIsParking(false);
+    setLocCountry(''); setLocCity(''); setLocBuilding(''); setLocFloor('');
+    setNewFloorId(''); setNewFloorName('');
     loadFloors();
     setSelectedFloor(floor);
     loadFloorDesks(floor.floorId);
@@ -110,6 +103,8 @@ export default function FloorPlanBuilder() {
     setSelectedFloor(f);
     loadFloorDesks(f.floorId);
     setPendingPos(null);
+    setSelectedPinId(null);
+    setEditPin(null);
   }
 
   function handleImageClick(e: React.MouseEvent<HTMLDivElement>) {
@@ -119,6 +114,8 @@ export default function FloorPlanBuilder() {
     const yPct = Math.round(((e.clientY - rect.top) / rect.height) * 1000);
     setPendingPos({ x: xPct, y: yPct });
     setPickedDeskId('');
+    setSelectedPinId(null);
+    setEditPin(null);
   }
 
   async function placeDesk() {
@@ -126,27 +123,23 @@ export default function FloorPlanBuilder() {
     await fetch('/api/desks/' + pickedDeskId, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        xPosition: pendingPos.x,
-        yPosition: pendingPos.y,
-        floorId: selectedFloor.floorId,
-      }),
+      body: JSON.stringify({ xPosition: pendingPos.x, yPosition: pendingPos.y, floorId: selectedFloor.floorId }),
     });
     setMsg('Desk placed');
     setTimeout(() => setMsg(''), 3000);
-    setPendingPos(null);
-    setPickedDeskId('');
-    loadFloorDesks(selectedFloor.floorId);
-    loadAllDesks();
+    setPendingPos(null); setPickedDeskId('');
+    loadFloorDesks(selectedFloor.floorId); loadAllDesks();
   }
 
   function handlePinMouseDown(e: React.MouseEvent, id: number) {
     e.stopPropagation();
+    hasMoved.current = false;
     setDragId(id);
   }
 
   function handleMapMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     if (dragId === null || !imgRef.current) return;
+    hasMoved.current = true;
     const rect = imgRef.current.getBoundingClientRect();
     const xPct = Math.max(0, Math.min(1000, ((e.clientX - rect.left) / rect.width) * 1000));
     const yPct = Math.max(0, Math.min(1000, ((e.clientY - rect.top) / rect.height) * 1000));
@@ -155,21 +148,53 @@ export default function FloorPlanBuilder() {
 
   function handleMapMouseUp() {
     if (dragId === null) return;
-    const desk = floorDesks.find((d) => d.id === dragId);
-    if (desk) {
-      fetch('/api/desks/' + desk.id, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ xPosition: Math.round(desk.xPosition), yPosition: Math.round(desk.yPosition) }),
-      }).then(() => { setMsg('Position saved'); setTimeout(() => setMsg(''), 2000); });
+    if (!hasMoved.current) {
+      // Click (not drag) → toggle selection
+      if (selectedPinId === dragId) {
+        setSelectedPinId(null);
+        setEditPin(null);
+      } else {
+        const desk = floorDesks.find((d) => d.id === dragId);
+        if (desk) {
+          setSelectedPinId(desk.id);
+          setEditPin({ w: desk.pinWidth ?? 16, h: desk.pinHeight ?? 10, r: desk.pinRotation ?? 0 });
+          setPendingPos(null);
+        }
+      }
+    } else {
+      // Drag → save position
+      const desk = floorDesks.find((d) => d.id === dragId);
+      if (desk) {
+        fetch('/api/desks/' + desk.id, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ xPosition: Math.round(desk.xPosition), yPosition: Math.round(desk.yPosition) }),
+        }).then(() => { setMsg('Position saved'); setTimeout(() => setMsg(''), 2000); });
+      }
     }
+    hasMoved.current = false;
     setDragId(null);
   }
 
   function removeDesk(id: number) {
     fetch('/api/desks/' + id, { method: 'DELETE' }).then(() => {
       if (selectedFloor) { loadFloorDesks(selectedFloor.floorId); loadAllDesks(); }
+      if (selectedPinId === id) { setSelectedPinId(null); setEditPin(null); }
     });
+  }
+
+  async function savePinSettings() {
+    if (!selectedPinId || !editPin || !selectedFloor) return;
+    await fetch('/api/desks/' + selectedPinId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pinWidth: editPin.w, pinHeight: editPin.h, pinRotation: editPin.r }),
+    });
+    setMsg('Pin settings saved');
+    setTimeout(() => setMsg(''), 2000);
+    loadFloorDesks(selectedFloor.floorId);
+    setSelectedPinId(null);
+    setEditPin(null);
   }
 
   async function confirmDeleteFloor() {
@@ -179,16 +204,12 @@ export default function FloorPlanBuilder() {
     if (selectedFloor?.id === deleteTarget.id) setSelectedFloor(null);
     setMsg('Floor plan deleted');
     setTimeout(() => setMsg(''), 3000);
-    loadFloors();
-    loadAllDesks();
+    loadFloors(); loadAllDesks();
   }
 
   const pickedDesk = allDesks.find((d) => d.id === Number(pickedDeskId));
-
-  // Desks already placed on this floor (to exclude from picker or mark them)
+  const selectedPinDesk = floorDesks.find((d) => d.id === selectedPinId);
   const placedIds = new Set(floorDesks.map((d) => d.id));
-
-  // Sort: unplaced first, then placed elsewhere
   const sortedDesks = [...allDesks].sort((a, b) => {
     const aPlaced = placedIds.has(a.id);
     const bPlaced = placedIds.has(b.id);
@@ -217,7 +238,7 @@ export default function FloorPlanBuilder() {
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </button>
-        {showUpload ? (
+        {showUpload && (
           <div className="px-5 pb-5">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
               <div>
@@ -225,9 +246,7 @@ export default function FloorPlanBuilder() {
                 <select value={locCountry} onChange={(e) => { setLocCountry(e.target.value); setLocCity(''); setLocBuilding(''); setLocFloor(''); }}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
                   <option value="">Select…</option>
-                  {locations.map((l) => l.country).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => (
-                    <option key={v} value={v}>{v}</option>
-                  ))}
+                  {locations.map((l) => l.country).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => <option key={v} value={v}>{v}</option>)}
                 </select>
               </div>
               <div>
@@ -235,9 +254,7 @@ export default function FloorPlanBuilder() {
                 <select value={locCity} onChange={(e) => { setLocCity(e.target.value); setLocBuilding(''); setLocFloor(''); }}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" disabled={!locCountry}>
                   <option value="">Select…</option>
-                  {locations.filter((l) => l.country === locCountry).map((l) => l.city).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => (
-                    <option key={v} value={v}>{v}</option>
-                  ))}
+                  {locations.filter((l) => l.country === locCountry).map((l) => l.city).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => <option key={v} value={v}>{v}</option>)}
                 </select>
               </div>
               <div>
@@ -245,9 +262,7 @@ export default function FloorPlanBuilder() {
                 <select value={locBuilding} onChange={(e) => { setLocBuilding(e.target.value); setLocFloor(''); }}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" disabled={!locCity}>
                   <option value="">Select…</option>
-                  {locations.filter((l) => l.country === locCountry && l.city === locCity).map((l) => l.building).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => (
-                    <option key={v} value={v}>{v}</option>
-                  ))}
+                  {locations.filter((l) => l.country === locCountry && l.city === locCity).map((l) => l.building).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => <option key={v} value={v}>{v}</option>)}
                 </select>
               </div>
               <div>
@@ -255,9 +270,7 @@ export default function FloorPlanBuilder() {
                 <select value={locFloor} onChange={(e) => setLocFloor(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" disabled={!locBuilding}>
                   <option value="">Select…</option>
-                  {locations.filter((l) => l.country === locCountry && l.city === locCity && l.building === locBuilding).map((l) => l.floor).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => (
-                    <option key={v} value={v}>{v}</option>
-                  ))}
+                  {locations.filter((l) => l.country === locCountry && l.city === locCity && l.building === locBuilding).map((l) => l.floor).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => <option key={v} value={v}>{v}</option>)}
                 </select>
               </div>
             </div>
@@ -278,26 +291,20 @@ export default function FloorPlanBuilder() {
             </div>
             <div className="flex items-center gap-4 flex-wrap">
               <label className="flex items-center gap-2 cursor-pointer select-none">
-                <button
-                  type="button"
-                  onClick={() => setIsParking((v) => !v)}
-                  className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${isParking ? 'bg-orange-500' : 'bg-gray-200'}`}
-                >
+                <button type="button" onClick={() => setIsParking((v) => !v)}
+                  className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${isParking ? 'bg-orange-500' : 'bg-gray-200'}`}>
                   <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isParking ? 'translate-x-4' : ''}`} />
                 </button>
                 <span className="text-sm text-gray-600">Parking floor</span>
               </label>
-              <button
-                onClick={handleUpload}
-                disabled={uploading}
-                className="px-5 py-2 bg-[#1a2535] text-white text-sm font-medium rounded-lg hover:bg-[#243148] disabled:opacity-50"
-              >
+              <button onClick={handleUpload} disabled={uploading}
+                className="px-5 py-2 bg-[#1a2535] text-white text-sm font-medium rounded-lg hover:bg-[#243148] disabled:opacity-50">
                 {uploading ? 'Uploading…' : 'Upload Floor Plan'}
               </button>
               {uploading && <p className="text-sm text-gray-400">Please wait…</p>}
             </div>
           </div>
-        ) : null}
+        )}
       </div>
 
       {/* Floor selector */}
@@ -308,9 +315,7 @@ export default function FloorPlanBuilder() {
               className={`px-3 py-1.5 rounded-l-full border text-sm ${selectedFloor?.id === f.id ? 'bg-[#1e3a5f] text-white border-[#1e3a5f]' : 'bg-white text-gray-700 border-gray-200'}`}>
               {f.name}
             </button>
-            <button
-              onClick={() => setDeleteTarget(f)}
-              title="Delete floor plan"
+            <button onClick={() => setDeleteTarget(f)} title="Delete floor plan"
               className={`px-2 py-1.5 rounded-r-full border-y border-r text-sm leading-none transition-colors ${selectedFloor?.id === f.id ? 'bg-[#1e3a5f] border-[#1e3a5f] text-white/60 hover:text-white hover:bg-red-600 hover:border-red-600' : 'bg-white border-gray-200 text-gray-300 hover:text-red-500 hover:border-red-300'}`}>
               ×
             </button>
@@ -319,14 +324,12 @@ export default function FloorPlanBuilder() {
         {floors.length === 0 && <p className="text-sm text-gray-400">No floor plans uploaded yet.</p>}
       </div>
 
-      {/* Delete floor warning modal */}
+      {/* Delete floor modal */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
             <h3 className="font-bold text-gray-900 mb-1">Delete floor plan?</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              You are about to delete <span className="font-semibold text-gray-800">{deleteTarget.name}</span>.
-            </p>
+            <p className="text-sm text-gray-500 mb-4">You are about to delete <span className="font-semibold text-gray-800">{deleteTarget.name}</span>.</p>
             <div className="bg-amber-50 rounded-xl p-3 mb-5 text-xs text-amber-800 space-y-1">
               <p className="font-semibold mb-1">This will also:</p>
               <p>• Remove all desk pins placed on this floor map</p>
@@ -334,18 +337,8 @@ export default function FloorPlanBuilder() {
               <p>• The image URL will no longer be accessible from the app</p>
             </div>
             <div className="flex gap-3">
-              <button
-                onClick={() => setDeleteTarget(null)}
-                className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDeleteFloor}
-                className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700"
-              >
-                Delete
-              </button>
+              <button onClick={() => setDeleteTarget(null)} className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button onClick={confirmDeleteFloor} className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700">Delete</button>
             </div>
           </div>
         </div>
@@ -360,9 +353,7 @@ export default function FloorPlanBuilder() {
           </div>
           <p className="font-semibold text-orange-900 mb-1">This is a parking floor</p>
           <p className="text-sm text-orange-700 mb-4">Desk pins cannot be placed on parking floors. Use the Parking Spot Builder to assign spots to this map.</p>
-          <a href="/admin/parking" className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600">
-            Go to Parking Spot Builder
-          </a>
+          <a href="/admin/parking" className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 text-white text-sm font-medium rounded-lg hover:bg-orange-600">Go to Parking Spot Builder</a>
         </div>
       )}
 
@@ -370,7 +361,7 @@ export default function FloorPlanBuilder() {
         <div className="flex gap-5 flex-col lg:flex-row">
           {/* Map */}
           <div className="flex-1 bg-white rounded-2xl p-4 shadow-sm ring-1 ring-gray-100">
-            <p className="text-xs text-gray-400 mb-3">Click on the map to place a desk. Drag pins to reposition.</p>
+            <p className="text-xs text-gray-400 mb-3">Click a pin to resize/rotate · Drag to reposition · Click map background to place new</p>
             <div
               ref={imgRef}
               onClick={handleImageClick}
@@ -379,6 +370,7 @@ export default function FloorPlanBuilder() {
               onMouseLeave={handleMapMouseUp}
               style={{ position: 'relative', width: '100%', borderRadius: 8, cursor: pendingPos ? 'default' : 'crosshair', userSelect: 'none', lineHeight: 0 }}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={selectedFloor.imageUrl} alt={selectedFloor.name} style={{ width: '100%', height: 'auto', display: 'block', pointerEvents: 'none' }} draggable={false} />
 
               {/* Pending position indicator */}
@@ -388,48 +380,63 @@ export default function FloorPlanBuilder() {
                 </div>
               )}
 
-              {/* Placed desk pins */}
-              {floorDesks.map((d) => (
-                <div
-                  key={d.id}
-                  onMouseDown={(e) => handlePinMouseDown(e, d.id)}
-                  onClick={(e) => e.stopPropagation()}
-                  style={{ position: 'absolute', left: `${d.xPosition / 10}%`, top: `${d.yPosition / 10}%`, transform: 'translate(-50%, -50%)', cursor: 'grab' }}
-                  className="group"
-                  title={d.name + ' · ' + d.zone}
-                >
-                  <div className={`w-3 h-3 rounded-full shadow ${d.restricted ? 'bg-purple-600' : 'bg-green-600'}`} />
-                  <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-gray-900 text-white text-[10px] rounded px-1.5 py-0.5 whitespace-nowrap pointer-events-none">
-                    {d.name}
-                  </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); removeDesk(d.id); }}
-                    className="hidden group-hover:flex absolute -top-2 -right-2 w-4 h-4 bg-red-600 text-white rounded-full items-center justify-center text-[9px]"
+              {/* Desk pins */}
+              {floorDesks.map((d) => {
+                const pw = d.pinWidth ?? 16;
+                const ph = d.pinHeight ?? 10;
+                const pr = d.pinRotation ?? 0;
+                const isSelected = selectedPinId === d.id;
+                return (
+                  <div
+                    key={d.id}
+                    onMouseDown={(e) => handlePinMouseDown(e, d.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      position: 'absolute',
+                      left: `${d.xPosition / 10}%`,
+                      top: `${d.yPosition / 10}%`,
+                      transform: 'translate(-50%, -50%)',
+                      cursor: dragId === d.id ? 'grabbing' : 'grab',
+                    }}
+                    className="group"
+                    title={d.name + ' · ' + d.zone}
                   >
-                    ×
-                  </button>
-                </div>
-              ))}
+                    <div style={{
+                      width: pw,
+                      height: ph,
+                      borderRadius: 2,
+                      background: d.restricted ? '#7c3aed' : '#16a34a',
+                      transform: `rotate(${pr}deg)`,
+                      boxShadow: isSelected ? '0 0 0 2px white, 0 0 0 4px #3b82f6' : undefined,
+                      transition: 'box-shadow 0.15s',
+                    }} />
+                    <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-gray-900 text-white text-[10px] rounded px-1.5 py-0.5 whitespace-nowrap pointer-events-none z-30">
+                      {d.name}
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeDesk(d.id); }}
+                      className="hidden group-hover:flex absolute -top-2 -right-2 w-4 h-4 bg-red-600 text-white rounded-full items-center justify-center text-[9px] z-30"
+                    >×</button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* Desk picker panel */}
+          {/* Right panel */}
           <div className="lg:w-72 flex-shrink-0">
             {pendingPos ? (
+              /* Place Desk */
               <div className="bg-white rounded-2xl p-5 shadow-sm ring-1 ring-blue-200">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-semibold text-gray-900 text-sm">Place Desk</h3>
                   <button onClick={() => setPendingPos(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
                 </div>
                 <p className="text-xs text-gray-400 mb-4">Position: {pendingPos.x}, {pendingPos.y}</p>
-
                 <div className="mb-3">
                   <label className="text-xs font-medium text-gray-500 block mb-1">Select desk</label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] bg-white"
-                    value={pickedDeskId}
-                    onChange={(e) => setPickedDeskId(e.target.value)}
-                  >
+                  <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] bg-white"
+                    value={pickedDeskId} onChange={(e) => setPickedDeskId(e.target.value)}>
                     <option value="">Choose a desk...</option>
                     {sortedDesks.map((d) => (
                       <option key={d.id} value={d.id}>
@@ -438,39 +445,88 @@ export default function FloorPlanBuilder() {
                     ))}
                   </select>
                 </div>
-
                 {pickedDesk && (
                   <div className="bg-gray-50 rounded-xl p-3 mb-4 text-xs space-y-1.5">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Zone</span>
-                      <span className="font-medium text-gray-700">{pickedDesk.zone || '—'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Current floor</span>
-                      <span className="font-medium text-gray-700">{pickedDesk.floorId}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Restricted</span>
-                      <span className="font-medium text-gray-700">{pickedDesk.restricted ? 'Yes' : 'No'}</span>
-                    </div>
+                    <div className="flex justify-between"><span className="text-gray-400">Zone</span><span className="font-medium text-gray-700">{pickedDesk.zone || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-400">Current floor</span><span className="font-medium text-gray-700">{pickedDesk.floorId}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-400">Restricted</span><span className="font-medium text-gray-700">{pickedDesk.restricted ? 'Yes' : 'No'}</span></div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Amenities</span>
-                      <span className="font-medium text-gray-700">
-                        {[pickedDesk.hasMonitor && 'Mon', pickedDesk.hasKeyboard && 'KB', pickedDesk.hasPedestal && 'Ped'].filter(Boolean).join(', ') || 'None'}
-                      </span>
+                      <span className="font-medium text-gray-700">{[pickedDesk.hasMonitor && 'Mon', pickedDesk.hasKeyboard && 'KB', pickedDesk.hasPedestal && 'Ped'].filter(Boolean).join(', ') || 'None'}</span>
                     </div>
                   </div>
                 )}
-
-                <button
-                  onClick={placeDesk}
-                  disabled={!pickedDeskId}
-                  className="w-full py-2 bg-[#1e3a5f] text-white rounded-lg text-sm font-medium hover:bg-[#16304d] disabled:opacity-40 disabled:cursor-not-allowed"
-                >
+                <button onClick={placeDesk} disabled={!pickedDeskId}
+                  className="w-full py-2 bg-[#1e3a5f] text-white rounded-lg text-sm font-medium hover:bg-[#16304d] disabled:opacity-40 disabled:cursor-not-allowed">
                   Place Desk
                 </button>
               </div>
+            ) : selectedPinId && editPin ? (
+              /* Edit Pin */
+              <div className="bg-white rounded-2xl p-5 shadow-sm ring-1 ring-blue-200">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 text-sm">Edit Pin</h3>
+                    {selectedPinDesk && <p className="text-xs text-gray-400 mt-0.5">{selectedPinDesk.name}</p>}
+                  </div>
+                  <button onClick={() => { setSelectedPinId(null); setEditPin(null); }} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+                </div>
+
+                {/* Live preview */}
+                <div className="flex items-center justify-center bg-gray-100 rounded-xl mb-4" style={{ height: 72 }}>
+                  <div style={{
+                    width: editPin.w,
+                    height: editPin.h,
+                    borderRadius: 2,
+                    background: selectedPinDesk?.restricted ? '#7c3aed' : '#16a34a',
+                    transform: `rotate(${editPin.r}deg)`,
+                    boxShadow: '0 0 0 2px white, 0 0 0 4px #3b82f6',
+                  }} />
+                </div>
+
+                {/* Width */}
+                <div className="mb-3">
+                  <div className="flex justify-between mb-1">
+                    <label className="text-xs font-medium text-gray-500">Width</label>
+                    <span className="text-xs text-gray-700 font-mono">{editPin.w}px</span>
+                  </div>
+                  <input type="range" min={6} max={60} value={editPin.w}
+                    onChange={(e) => setEditPin({ ...editPin, w: Number(e.target.value) })}
+                    className="w-full accent-[#1e3a5f]" style={{ height: 6 }} />
+                </div>
+
+                {/* Height */}
+                <div className="mb-3">
+                  <div className="flex justify-between mb-1">
+                    <label className="text-xs font-medium text-gray-500">Height</label>
+                    <span className="text-xs text-gray-700 font-mono">{editPin.h}px</span>
+                  </div>
+                  <input type="range" min={4} max={40} value={editPin.h}
+                    onChange={(e) => setEditPin({ ...editPin, h: Number(e.target.value) })}
+                    className="w-full accent-[#1e3a5f]" style={{ height: 6 }} />
+                </div>
+
+                {/* Rotation */}
+                <div className="mb-5">
+                  <div className="flex justify-between mb-1">
+                    <label className="text-xs font-medium text-gray-500">Rotation</label>
+                    <span className="text-xs text-gray-700 font-mono">{editPin.r}°</span>
+                  </div>
+                  <input type="range" min={0} max={355} step={5} value={editPin.r}
+                    onChange={(e) => setEditPin({ ...editPin, r: Number(e.target.value) })}
+                    className="w-full accent-[#1e3a5f]" style={{ height: 6 }} />
+                  <div className="flex justify-between mt-1 text-[10px] text-gray-300">
+                    <span>0°</span><span>90°</span><span>180°</span><span>270°</span><span>355°</span>
+                  </div>
+                </div>
+
+                <button onClick={savePinSettings}
+                  className="w-full py-2 bg-[#1e3a5f] text-white rounded-lg text-sm font-medium hover:bg-[#16304d]">
+                  Save Pin Settings
+                </button>
+              </div>
             ) : (
+              /* Desks on floor */
               <div className="bg-white rounded-2xl p-5 shadow-sm ring-1 ring-gray-100">
                 <h3 className="font-semibold text-gray-900 text-sm mb-3">Desks on this floor</h3>
                 {floorDesks.length === 0 ? (
@@ -479,17 +535,21 @@ export default function FloorPlanBuilder() {
                   <div className="flex flex-col gap-2 max-h-96 overflow-y-auto">
                     {floorDesks.map((d) => (
                       <div key={d.id} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2">
-                        <div>
-                          <span className={`inline-block w-2 h-2 rounded-full mr-1.5 ${d.restricted ? 'bg-purple-600' : 'bg-green-600'}`} />
+                        <div className="flex items-center gap-2">
+                          <div style={{
+                            width: 14, height: 9, borderRadius: 2, flexShrink: 0,
+                            background: d.restricted ? '#7c3aed' : '#16a34a',
+                            transform: `rotate(${d.pinRotation ?? 0}deg)`,
+                          }} />
                           <span className="font-medium text-gray-800">{d.name}</span>
-                          <span className="text-gray-400 ml-1">{d.zone}</span>
+                          <span className="text-gray-400">{d.zone}</span>
                         </div>
                         <button onClick={() => removeDesk(d.id)} className="text-red-400 hover:text-red-600 font-medium ml-2">×</button>
                       </div>
                     ))}
                   </div>
                 )}
-                <p className="text-xs text-gray-300 mt-3">Click anywhere on the map to place a desk</p>
+                <p className="text-xs text-gray-300 mt-3">Click any pin to resize/rotate · Click map to place</p>
               </div>
             )}
           </div>

@@ -11,6 +11,9 @@ type Desk = {
   yPosition: number;
   active: boolean;
   restricted: boolean;
+  pinWidth: number;
+  pinHeight: number;
+  pinRotation: number;
 };
 
 type Floor = { id: number; floorId: string; name: string; imageUrl: string; isParking: boolean };
@@ -236,12 +239,15 @@ export default function FloorMap() {
                           title={d.name}
                         >
                           <div style={{
-                            width:  selected?.id === d.id ? (isDesktop ? 20 : 13) : (isDesktop ? 16 : 10),
-                            height: selected?.id === d.id ? (isDesktop ? 12 : 8)  : (isDesktop ? 10 : 6),
+                            width:  isDesktop ? (d.pinWidth ?? 16) : Math.round((d.pinWidth ?? 16) * 0.65),
+                            height: isDesktop ? (d.pinHeight ?? 10) : Math.round((d.pinHeight ?? 10) * 0.65),
                             borderRadius: 2,
                             background: pinColor(d),
+                            transform: `rotate(${d.pinRotation ?? 0}deg)`,
                             boxShadow: selected?.id === d.id ? `0 0 0 1.5px white, 0 0 0 3px ${pinColor(d)}` : undefined,
-                            transition: 'width 0.15s, height 0.15s',
+                            outline: selected?.id === d.id ? `2px solid ${pinColor(d)}` : undefined,
+                            outlineOffset: selected?.id === d.id ? 3 : undefined,
+                            transition: 'box-shadow 0.15s',
                           }} />
                         </div>
                       ))}
