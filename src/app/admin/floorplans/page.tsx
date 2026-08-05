@@ -10,91 +10,96 @@ type Desk = {
   xPosition: number;
   yPosition: number;
   restricted: boolean;
+  hasMonitor: boolean;
+  hasKeyboard: boolean;
+  hasPedestal: boolean;
 };
 
 export default function FloorPlanBuilder() {
   const [floors, setFloors] = useState<Floor[]>([]);
   const [selectedFloor, setSelectedFloor] = useState<Floor | null>(null);
-  const [desks, setDesks] = useState<Desk[]>([]);
+  const [floorDesks, setFloorDesks] = useState<Desk[]>([]);
+  const [allDesks, setAllDesks] = useState<Desk[]>([]);
   const [msg, setMsg] = useState('');
   const [newFloorId, setNewFloorId] = useState('');
   const [newFloorName, setNewFloorName] = useState('');
   const [uploading, setUploading] = useState(false);
   const [dragId, setDragId] = useState<number | null>(null);
+  const [pendingPos, setPendingPos] = useState<{ x: number; y: number } | null>(null);
+  const [pickedDeskId, setPickedDeskId] = useState<string>('');
   const imgRef = useRef<HTMLDivElement>(null);
 
   function loadFloors() {
     fetch('/api/floors').then((r) => r.json()).then((d) => setFloors(Array.isArray(d) ? d : []));
   }
-  function loadDesks(floorId: string) {
+
+  function loadAllDesks() {
+    fetch('/api/desks').then((r) => r.json()).then((d) => setAllDesks(Array.isArray(d) ? d : []));
+  }
+
+  function loadFloorDesks(floorId: string) {
     fetch('/api/desks').then((r) => r.json()).then((d) => {
-      setDesks(Array.isArray(d) ? d.filter((x: Desk) => x.floorId === floorId) : []);
+      setFloorDesks(Array.isArray(d) ? d.filter((x: Desk) => x.floorId === floorId) : []);
     });
   }
 
-  useEffect(() => { loadFloors(); }, []);
+  useEffect(() => { loadFloors(); loadAllDesks(); }, []);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file || !newFloorId || !newFloorName) {
-      setMsg('Enter Floor ID and Name before choosing a file');
-      return;
-    }
+    if (!file || !newFloorId || !newFloorName) { setMsg('Enter Floor ID and Name before choosing a file'); return; }
     setUploading(true);
     const formData = new FormData();
     formData.append('file', file);
-
     const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
     const { url } = await uploadRes.json();
-
     const floorRes = await fetch('/api/floors', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ floorId: newFloorId, name: newFloorName, imageUrl: url }),
     });
     const floor = await floorRes.json();
-
     setUploading(false);
     setMsg('Floor plan uploaded');
     setNewFloorId('');
     setNewFloorName('');
     loadFloors();
     setSelectedFloor(floor);
-    loadDesks(floor.floorId);
+    loadFloorDesks(floor.floorId);
   }
 
   function selectFloor(f: Floor) {
     setSelectedFloor(f);
-    loadDesks(f.floorId);
+    loadFloorDesks(f.floorId);
+    setPendingPos(null);
   }
 
   function handleImageClick(e: React.MouseEvent<HTMLDivElement>) {
-    if (!selectedFloor || !imgRef.current) return;
+    if (!selectedFloor || !imgRef.current || dragId !== null) return;
     const rect = imgRef.current.getBoundingClientRect();
-    const xPct = ((e.clientX - rect.left) / rect.width) * 1000;
-    const yPct = ((e.clientY - rect.top) / rect.height) * 1000;
+    const xPct = Math.round(((e.clientX - rect.left) / rect.width) * 1000);
+    const yPct = Math.round(((e.clientY - rect.top) / rect.height) * 1000);
+    setPendingPos({ x: xPct, y: yPct });
+    setPickedDeskId('');
+  }
 
-    const name = prompt('Desk name (e.g. D-101):');
-    if (!name) return;
-    const zone = prompt('Zone (e.g. Zone A):') || 'Zone A';
-
-    fetch('/api/desks', {
-      method: 'POST',
+  async function placeDesk() {
+    if (!pendingPos || !pickedDeskId || !selectedFloor) return;
+    await fetch('/api/desks/' + pickedDeskId, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        name,
-        zone,
+        xPosition: pendingPos.x,
+        yPosition: pendingPos.y,
         floorId: selectedFloor.floorId,
-        buildingId: 'hq',
-        xPosition: Math.round(xPct),
-        yPosition: Math.round(yPct),
-        active: true,
-        restricted: false,
       }),
-    }).then(() => {
-      setMsg('Desk placed');
-      loadDesks(selectedFloor.floorId);
     });
+    setMsg('Desk placed');
+    setTimeout(() => setMsg(''), 3000);
+    setPendingPos(null);
+    setPickedDeskId('');
+    loadFloorDesks(selectedFloor.floorId);
+    loadAllDesks();
   }
 
   function handlePinMouseDown(e: React.MouseEvent, id: number) {
@@ -107,27 +112,40 @@ export default function FloorPlanBuilder() {
     const rect = imgRef.current.getBoundingClientRect();
     const xPct = Math.max(0, Math.min(1000, ((e.clientX - rect.left) / rect.width) * 1000));
     const yPct = Math.max(0, Math.min(1000, ((e.clientY - rect.top) / rect.height) * 1000));
-    setDesks((prev) => prev.map((d) => (d.id === dragId ? { ...d, xPosition: xPct, yPosition: yPct } : d)));
+    setFloorDesks((prev) => prev.map((d) => (d.id === dragId ? { ...d, xPosition: xPct, yPosition: yPct } : d)));
   }
 
   function handleMapMouseUp() {
     if (dragId === null) return;
-    const desk = desks.find((d) => d.id === dragId);
+    const desk = floorDesks.find((d) => d.id === dragId);
     if (desk) {
       fetch('/api/desks/' + desk.id, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ xPosition: Math.round(desk.xPosition), yPosition: Math.round(desk.yPosition) }),
-      }).then(() => setMsg('Desk position saved'));
+      }).then(() => { setMsg('Position saved'); setTimeout(() => setMsg(''), 2000); });
     }
     setDragId(null);
   }
 
   function removeDesk(id: number) {
     fetch('/api/desks/' + id, { method: 'DELETE' }).then(() => {
-      if (selectedFloor) loadDesks(selectedFloor.floorId);
+      if (selectedFloor) { loadFloorDesks(selectedFloor.floorId); loadAllDesks(); }
     });
   }
+
+  const pickedDesk = allDesks.find((d) => d.id === Number(pickedDeskId));
+
+  // Desks already placed on this floor (to exclude from picker or mark them)
+  const placedIds = new Set(floorDesks.map((d) => d.id));
+
+  // Sort: unplaced first, then placed elsewhere
+  const sortedDesks = [...allDesks].sort((a, b) => {
+    const aPlaced = placedIds.has(a.id);
+    const bPlaced = placedIds.has(b.id);
+    if (aPlaced !== bPlaced) return aPlaced ? 1 : -1;
+    return a.name.localeCompare(b.name);
+  });
 
   return (
     <div className="p-5 sm:p-7 md:p-8 max-w-6xl">
@@ -138,33 +156,22 @@ export default function FloorPlanBuilder() {
 
       {msg && <div className="p-3 bg-green-50 text-green-800 rounded-lg mb-4 text-sm">{msg}</div>}
 
+      {/* Upload */}
       <div className="bg-white rounded-2xl p-5 md:p-6 mb-6 shadow-sm ring-1 ring-gray-100">
         <h3 className="text-sm font-semibold text-gray-900 mb-4">Upload new floor plan</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-          <input
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm"
-            placeholder="Floor ID (e.g. floor-4)"
-            value={newFloorId}
-            onChange={(e) => setNewFloorId(e.target.value)}
-          />
-          <input
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm"
-            placeholder="Floor name (e.g. HQ - Level 4)"
-            value={newFloorName}
-            onChange={(e) => setNewFloorName(e.target.value)}
-          />
+          <input className="px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Floor ID (e.g. floor-4)" value={newFloorId} onChange={(e) => setNewFloorId(e.target.value)} />
+          <input className="px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Floor name (e.g. HQ - Level 4)" value={newFloorName} onChange={(e) => setNewFloorName(e.target.value)} />
           <input type="file" accept="image/*" onChange={handleUpload} className="text-sm" />
         </div>
         {uploading && <p className="text-sm text-gray-500">Uploading...</p>}
       </div>
 
+      {/* Floor selector */}
       <div className="flex gap-2 flex-wrap mb-6">
         {floors.map((f) => (
-          <button
-            key={f.id}
-            onClick={() => selectFloor(f)}
-            className={`px-3 py-1.5 rounded-full border text-sm ${selectedFloor?.id === f.id ? 'bg-[#1e3a5f] text-white border-[#1e3a5f]' : 'bg-white text-gray-700 border-gray-200'}`}
-          >
+          <button key={f.id} onClick={() => selectFloor(f)}
+            className={`px-3 py-1.5 rounded-full border text-sm ${selectedFloor?.id === f.id ? 'bg-[#1e3a5f] text-white border-[#1e3a5f]' : 'bg-white text-gray-700 border-gray-200'}`}>
             {f.name}
           </button>
         ))}
@@ -172,52 +179,131 @@ export default function FloorPlanBuilder() {
       </div>
 
       {selectedFloor && (
-        <div className="bg-white rounded-2xl p-4 shadow-sm ring-1 ring-gray-100">
-          <p className="text-sm text-gray-500 mb-2">Click anywhere on the image to place a desk. Drag existing pins to reposition.</p>
-          <div
-            ref={imgRef}
-            onClick={handleImageClick}
-            onMouseMove={handleMapMouseMove}
-            onMouseUp={handleMapMouseUp}
-            onMouseLeave={handleMapMouseUp}
-            style={{
-              position: 'relative',
-              width: '100%',
-              borderRadius: '8px',
-              cursor: 'crosshair',
-              userSelect: 'none',
-              lineHeight: 0,
-            }}
-          >
-            <img
-              src={selectedFloor.imageUrl}
-              alt={selectedFloor.name}
-              style={{ width: '100%', height: 'auto', display: 'block', pointerEvents: 'none' }}
-              draggable={false}
-            />
-            {desks.map((d) => (
-              <div
-                key={d.id}
-                onMouseDown={(e) => handlePinMouseDown(e, d.id)}
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                  position: 'absolute',
-                  left: `${d.xPosition / 10}%`,
-                  top: `${d.yPosition / 10}%`,
-                  transform: 'translate(-50%, -50%)',
-                  cursor: 'grab',
-                }}
-                className="group"
-              >
-                <div className={`w-3 h-3 rounded-full shadow ${d.restricted ? 'bg-purple-600' : 'bg-green-600'}`} />
-                <button
-                  onClick={(e) => { e.stopPropagation(); removeDesk(d.id); }}
-                  className="hidden group-hover:flex absolute -top-2 -right-2 w-4 h-4 bg-red-600 text-white rounded-full items-center justify-center text-[9px]"
+        <div className="flex gap-5 flex-col lg:flex-row">
+          {/* Map */}
+          <div className="flex-1 bg-white rounded-2xl p-4 shadow-sm ring-1 ring-gray-100">
+            <p className="text-xs text-gray-400 mb-3">Click on the map to place a desk. Drag pins to reposition.</p>
+            <div
+              ref={imgRef}
+              onClick={handleImageClick}
+              onMouseMove={handleMapMouseMove}
+              onMouseUp={handleMapMouseUp}
+              onMouseLeave={handleMapMouseUp}
+              style={{ position: 'relative', width: '100%', borderRadius: 8, cursor: pendingPos ? 'default' : 'crosshair', userSelect: 'none', lineHeight: 0 }}
+            >
+              <img src={selectedFloor.imageUrl} alt={selectedFloor.name} style={{ width: '100%', height: 'auto', display: 'block', pointerEvents: 'none' }} draggable={false} />
+
+              {/* Pending position indicator */}
+              {pendingPos && (
+                <div style={{ position: 'absolute', left: `${pendingPos.x / 10}%`, top: `${pendingPos.y / 10}%`, transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}>
+                  <div className="w-4 h-4 rounded-full bg-blue-500 ring-2 ring-white shadow-lg animate-pulse" />
+                </div>
+              )}
+
+              {/* Placed desk pins */}
+              {floorDesks.map((d) => (
+                <div
+                  key={d.id}
+                  onMouseDown={(e) => handlePinMouseDown(e, d.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ position: 'absolute', left: `${d.xPosition / 10}%`, top: `${d.yPosition / 10}%`, transform: 'translate(-50%, -50%)', cursor: 'grab' }}
+                  className="group"
+                  title={d.name + ' · ' + d.zone}
                 >
-                  ×
+                  <div className={`w-3 h-3 rounded-full shadow ${d.restricted ? 'bg-purple-600' : 'bg-green-600'}`} />
+                  <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-gray-900 text-white text-[10px] rounded px-1.5 py-0.5 whitespace-nowrap pointer-events-none">
+                    {d.name}
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeDesk(d.id); }}
+                    className="hidden group-hover:flex absolute -top-2 -right-2 w-4 h-4 bg-red-600 text-white rounded-full items-center justify-center text-[9px]"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Desk picker panel */}
+          <div className="lg:w-72 flex-shrink-0">
+            {pendingPos ? (
+              <div className="bg-white rounded-2xl p-5 shadow-sm ring-1 ring-blue-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-gray-900 text-sm">Place Desk</h3>
+                  <button onClick={() => setPendingPos(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+                </div>
+                <p className="text-xs text-gray-400 mb-4">Position: {pendingPos.x}, {pendingPos.y}</p>
+
+                <div className="mb-3">
+                  <label className="text-xs font-medium text-gray-500 block mb-1">Select desk</label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] bg-white"
+                    value={pickedDeskId}
+                    onChange={(e) => setPickedDeskId(e.target.value)}
+                  >
+                    <option value="">Choose a desk...</option>
+                    {sortedDesks.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}{placedIds.has(d.id) ? ' (on this floor)' : d.floorId !== selectedFloor.floorId ? ' (other floor)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {pickedDesk && (
+                  <div className="bg-gray-50 rounded-xl p-3 mb-4 text-xs space-y-1.5">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Zone</span>
+                      <span className="font-medium text-gray-700">{pickedDesk.zone || '—'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Current floor</span>
+                      <span className="font-medium text-gray-700">{pickedDesk.floorId}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Restricted</span>
+                      <span className="font-medium text-gray-700">{pickedDesk.restricted ? 'Yes' : 'No'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Amenities</span>
+                      <span className="font-medium text-gray-700">
+                        {[pickedDesk.hasMonitor && 'Mon', pickedDesk.hasKeyboard && 'KB', pickedDesk.hasPedestal && 'Ped'].filter(Boolean).join(', ') || 'None'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={placeDesk}
+                  disabled={!pickedDeskId}
+                  className="w-full py-2 bg-[#1e3a5f] text-white rounded-lg text-sm font-medium hover:bg-[#16304d] disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Place Desk
                 </button>
               </div>
-            ))}
+            ) : (
+              <div className="bg-white rounded-2xl p-5 shadow-sm ring-1 ring-gray-100">
+                <h3 className="font-semibold text-gray-900 text-sm mb-3">Desks on this floor</h3>
+                {floorDesks.length === 0 ? (
+                  <p className="text-xs text-gray-400">No desks placed yet. Click the map to start.</p>
+                ) : (
+                  <div className="flex flex-col gap-2 max-h-96 overflow-y-auto">
+                    {floorDesks.map((d) => (
+                      <div key={d.id} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2">
+                        <div>
+                          <span className={`inline-block w-2 h-2 rounded-full mr-1.5 ${d.restricted ? 'bg-purple-600' : 'bg-green-600'}`} />
+                          <span className="font-medium text-gray-800">{d.name}</span>
+                          <span className="text-gray-400 ml-1">{d.zone}</span>
+                        </div>
+                        <button onClick={() => removeDesk(d.id)} className="text-red-400 hover:text-red-600 font-medium ml-2">×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-gray-300 mt-3">Click anywhere on the map to place a desk</p>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -23,6 +23,7 @@ export async function PATCH(
   const data: Record<string, unknown> = {};
   if (body.xPosition !== undefined) data.xPosition = body.xPosition;
   if (body.yPosition !== undefined) data.yPosition = body.yPosition;
+  if (body.floorId !== undefined) data.floorId = body.floorId;
   if (body.hasMonitor !== undefined) data.hasMonitor = body.hasMonitor;
   if (body.hasKeyboard !== undefined) data.hasKeyboard = body.hasKeyboard;
   if (body.hasPedestal !== undefined) data.hasPedestal = body.hasPedestal;
