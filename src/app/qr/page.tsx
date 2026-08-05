@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 
 type Booking = {
   id: number;
@@ -59,9 +60,9 @@ export default function QRPage() {
             </div>
             <span className="bg-blue-50 text-blue-700 text-xs font-medium px-2.5 py-1 rounded-full ring-1 ring-inset ring-blue-200">CONFIRMED</span>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 text-center mb-4">
-            <p className="text-xs text-gray-400 mb-2">QR Token</p>
-            <code className="text-xs text-gray-700 break-all">{b.qrToken}</code>
+          <div className="bg-gray-50 rounded-lg p-4 flex flex-col items-center mb-4">
+            <QRCodeSVG value={b.qrToken} size={180} />
+            <p className="text-xs text-gray-400 mt-3 break-all text-center">{b.qrToken}</p>
           </div>
           <button onClick={() => checkin(b.id)} className="w-full py-3 bg-[#1e3a5f] text-white rounded-lg font-medium hover:bg-[#16304d]">Check In Now</button>
         </div>
