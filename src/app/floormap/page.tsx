@@ -145,8 +145,8 @@ export default function FloorMap() {
                         <div
                           style={{
                             position: 'relative',
-                            width: selected?.id === d.id ? '28px' : '22px',
-                            height: selected?.id === d.id ? '28px' : '22px',
+                            width: selected?.id === d.id ? '14px' : '11px',
+                            height: selected?.id === d.id ? '14px' : '11px',
                             borderRadius: '50%',
                             background: pinColor(d),
                           }}
