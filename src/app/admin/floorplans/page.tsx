@@ -180,17 +180,18 @@ export default function FloorPlanBuilder() {
             style={{
               position: 'relative',
               width: '100%',
-              aspectRatio: '16 / 9',
-              backgroundImage: `url(${selectedFloor.imageUrl})`,
-              backgroundSize: 'contain',
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'center',
-              backgroundColor: '#f9fafb',
               borderRadius: '8px',
               cursor: 'crosshair',
               userSelect: 'none',
+              lineHeight: 0,
             }}
           >
+            <img
+              src={selectedFloor.imageUrl}
+              alt={selectedFloor.name}
+              style={{ width: '100%', height: 'auto', display: 'block', pointerEvents: 'none' }}
+              draggable={false}
+            />
             {desks.map((d) => (
               <div
                 key={d.id}

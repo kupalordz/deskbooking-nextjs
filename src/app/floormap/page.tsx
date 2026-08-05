@@ -119,13 +119,13 @@ export default function FloorMap() {
                   <button type="button" onClick={() => resetTransform()} className="w-10 h-10 flex items-center justify-center text-[10px] text-gray-700 hover:bg-gray-50">Reset</button>
                 </div>
 
-                <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: '100%', height: '100%' }}>
-                  <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                <TransformComponent wrapperStyle={{ width: '100%', height: '100%' }} contentStyle={{ width: '100%' }}>
+                  <div style={{ position: 'relative', width: '100%' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={currentFloor.imageUrl}
                       alt={currentFloor.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                      style={{ width: '100%', height: 'auto', display: 'block' }}
                       draggable={false}
                     />
                     {floorDesks.map((d) => (
