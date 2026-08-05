@@ -144,26 +144,11 @@ export default function FloorMap() {
                       >
                         <div
                           style={{
-                            position: 'absolute',
-                            left: '50%',
-                            top: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            width: selected?.id === d.id ? '64px' : '48px',
-                            height: selected?.id === d.id ? '64px' : '48px',
-                            borderRadius: '50%',
-                            background: pinColor(d),
-                            opacity: 0.4,
-                          }}
-                        />
-                        <div
-                          style={{
                             position: 'relative',
                             width: selected?.id === d.id ? '28px' : '22px',
                             height: selected?.id === d.id ? '28px' : '22px',
                             borderRadius: '50%',
                             background: pinColor(d),
-                            border: '3px solid white',
-                            boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
                           }}
                         />
                       </div>
