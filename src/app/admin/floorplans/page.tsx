@@ -130,8 +130,11 @@ export default function FloorPlanBuilder() {
   }
 
   return (
-    <div className="px-4 py-6 sm:px-8 md:px-12 md:py-12 max-w-6xl mx-auto">
-      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-6 tracking-tight">Floor Plan Builder</h2>
+    <div className="p-5 sm:p-7 md:p-8 max-w-6xl">
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-gray-900">Floor Plan Builder</h2>
+        <p className="text-sm text-gray-400 mt-0.5">Upload floor maps and place desk pins</p>
+      </div>
 
       {msg && <div className="p-3 bg-green-50 text-green-800 rounded-lg mb-4 text-sm">{msg}</div>}
 

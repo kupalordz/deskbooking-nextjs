@@ -1,183 +1,153 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-type Desk = {
+type Booking = {
   id: number;
-  name: string;
-  zone: string;
-  floorId: string;
-  xPosition: number;
-  yPosition: number;
-  active: boolean;
-  restricted: boolean;
-  hasMonitor: boolean;
-  hasKeyboard: boolean;
-  hasPedestal: boolean;
+  bookingDate: string;
+  status: string;
+  userEmail: string;
+  desk: { name: string; zone: string; floorId: string };
 };
 
-const adminSections = [
-  { href: '/admin/users', label: 'User Profiles', desc: 'Manage users and vehicles' },
-  { href: '/admin/locations', label: 'Locations', desc: 'Country, city, building, floor, zone' },
-  { href: '/admin/shifts', label: 'Shift Schedules', desc: 'Define work shifts and days' },
-  { href: '/admin/parking', label: 'Parking Spots', desc: 'Car and motorcycle spots' },
-  { href: '/admin/floorplans', label: 'Floor Plan Builder', desc: 'Upload maps and place desk pins' },
-];
+type StatCard = { label: string; value: number | string; sub: string; color: string; bg: string; icon: React.ReactNode };
 
-export default function AdminPage() {
-  const [desks, setDesks] = useState<Desk[]>([]);
-  const [msg, setMsg] = useState('');
-  const [form, setForm] = useState({
-    name: '',
-    zone: '',
-    floorId: 'floor-1',
-    buildingId: 'hq',
-    xPosition: '500',
-    yPosition: '300',
-    active: true,
-    restricted: false,
-  });
+function DesksIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
+      <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" />
+    </svg>
+  );
+}
+function BookingIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
+      <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  );
+}
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
+      <path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  );
+}
+function ParkingIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
+      <rect x="1" y="3" width="15" height="13" rx="2" /><path d="M16 8h4l3 5v3h-7V8z" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" />
+    </svg>
+  );
+}
 
-  function load() {
-    fetch('/api/desks').then((r) => r.json()).then((d) => setDesks(Array.isArray(d) ? d : [])).catch(() => {});
-  }
+function formatDate(dateStr: string) {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
-  useEffect(() => { load(); }, []);
+export default function AdminDashboard() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [totalDesks, setTotalDesks] = useState(0);
+  const [parkingCount, setParkingCount] = useState(0);
+  const today = new Date().toISOString().split('T')[0];
 
-  function add() {
-    fetch('/api/desks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...form,
-        xPosition: Number(form.xPosition),
-        yPosition: Number(form.yPosition),
-      }),
-    }).then(() => {
-      setMsg('Desk added');
-      load();
-      setForm({ name: '', zone: '', floorId: 'floor-1', buildingId: 'hq', xPosition: '500', yPosition: '300', active: true, restricted: false });
-    });
-  }
+  useEffect(() => {
+    fetch('/api/bookings').then((r) => r.json()).then((d) => setBookings(Array.isArray(d) ? d : []));
+    fetch('/api/desks').then((r) => r.json()).then((d) => setTotalDesks(Array.isArray(d) ? d.length : 0));
+    fetch('/api/parking-spots').then((r) => r.json()).then((d) => setParkingCount(Array.isArray(d) ? d.length : 0));
+  }, []);
 
-  function remove(id: number) {
-    fetch('/api/desks/' + id, { method: 'DELETE' }).then(() => { setMsg('Desk removed'); load(); });
-  }
+  const todayBookings = bookings.filter((b) => b.bookingDate === today);
+  const confirmedBookings = bookings.filter((b) => b.status === 'CONFIRMED');
+  const latest = [...bookings].sort((a, b) => b.id - a.id).slice(0, 10);
 
-  function toggleAmenity(id: number, field: 'hasMonitor' | 'hasKeyboard' | 'hasPedestal', current: boolean) {
-    fetch('/api/desks/' + id, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ [field]: !current }),
-    }).then(() => load());
-  }
-
-  const inputClass = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]';
+  const stats: StatCard[] = [
+    { label: 'Total Desks', value: totalDesks, sub: 'Registered desks', color: 'text-[#0e7490]', bg: 'bg-[#ecfeff]', icon: <DesksIcon /> },
+    { label: "Today's Bookings", value: todayBookings.length, sub: 'Booked for today', color: 'text-[#15803d]', bg: 'bg-[#f0fdf4]', icon: <BookingIcon /> },
+    { label: 'Confirmed', value: confirmedBookings.length, sub: 'All confirmed', color: 'text-[#b45309]', bg: 'bg-[#fffbeb]', icon: <CheckIcon /> },
+    { label: 'Parking Spots', value: parkingCount, sub: 'Total spots', color: 'text-[#b91c1c]', bg: 'bg-[#fff1f2]', icon: <ParkingIcon /> },
+  ];
 
   return (
-    <div className="px-4 py-6 sm:px-8 sm:py-8 md:px-12 md:py-12 max-w-5xl mx-auto">
-      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-6 tracking-tight">Admin</h2>
+    <div className="p-5 sm:p-7 md:p-8">
+      <div className="mb-7">
+        <h2 className="text-xl font-bold text-gray-900">Dashboard</h2>
+        <p className="text-sm text-gray-400 mt-0.5">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+      </div>
 
-      {/* Section cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-8">
-        {adminSections.map((s) => (
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {stats.map((s) => (
+          <div key={s.label} className={`${s.bg} rounded-2xl p-5 flex flex-col gap-3`}>
+            <div className={s.color}>{s.icon}</div>
+            <div>
+              <p className={`text-3xl font-bold ${s.color}`}>{s.value}</p>
+              <p className="text-sm font-semibold text-gray-700 mt-0.5">{s.label}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{s.sub}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Quick links */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
+        {[
+          { href: '/admin/floorplans', label: 'Floor Plan Builder' },
+          { href: '/admin/users', label: 'User Profiles' },
+          { href: '/admin/locations', label: 'Locations' },
+          { href: '/admin/shifts', label: 'Shift Schedules' },
+          { href: '/admin/parking', label: 'Parking Spots' },
+          { href: '/admin/manage-lists', label: 'Manage Lists' },
+        ].map((s) => (
           <a
             key={s.href}
             href={s.href}
-            className="bg-white rounded-xl p-4 shadow-sm ring-1 ring-gray-100 hover:ring-[#1e3a5f] hover:shadow-md transition-all group"
+            className="bg-white rounded-xl px-4 py-3 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-100 hover:ring-[#3b82f6] hover:text-[#1e3a5f] transition-all"
           >
-            <p className="font-semibold text-gray-900 text-sm group-hover:text-[#1e3a5f]">{s.label}</p>
-            <p className="text-xs text-gray-400 mt-1">{s.desc}</p>
+            {s.label} →
           </a>
         ))}
       </div>
 
-      {msg && <div className="p-3 bg-green-50 text-green-800 rounded-lg mb-4 text-sm">{msg}</div>}
-
-      {/* Add desk form */}
-      <div className="bg-white rounded-2xl p-5 md:p-6 mb-6 shadow-sm ring-1 ring-gray-100">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">Add Desk</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-          <div>
-            <label className="text-xs text-gray-500 block mb-1">Desk name</label>
-            <input className={inputClass} value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="D-101" />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 block mb-1">Zone</label>
-            <input className={inputClass} value={form.zone} onChange={(e) => setForm((p) => ({ ...p, zone: e.target.value }))} placeholder="Zone A" />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 block mb-1">Floor</label>
-            <select className={inputClass} value={form.floorId} onChange={(e) => setForm((p) => ({ ...p, floorId: e.target.value }))}>
-              <option>floor-1</option>
-              <option>floor-2</option>
-              <option>floor-3</option>
-            </select>
-          </div>
-          <div className="flex items-end gap-4">
-            <label className="text-sm flex items-center gap-2">
-              <input type="checkbox" checked={form.restricted} onChange={(e) => setForm((p) => ({ ...p, restricted: e.target.checked }))} />
-              Restricted
-            </label>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 block mb-1">X Position (0-1000)</label>
-            <input className={inputClass} type="number" value={form.xPosition} onChange={(e) => setForm((p) => ({ ...p, xPosition: e.target.value }))} />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 block mb-1">Y Position (0-1000)</label>
-            <input className={inputClass} type="number" value={form.yPosition} onChange={(e) => setForm((p) => ({ ...p, yPosition: e.target.value }))} />
-          </div>
+      {/* Latest Bookings */}
+      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="font-semibold text-gray-900">Latest Bookings</h3>
+          <span className="text-xs text-gray-400">{bookings.length} total</span>
         </div>
-        <button onClick={add} className="px-5 py-2.5 bg-[#1e3a5f] text-white rounded-lg font-medium hover:bg-[#16304d]">Add Desk</button>
-      </div>
-
-      {/* Desk table */}
-      <div className="bg-white rounded-2xl overflow-hidden shadow-sm ring-1 ring-gray-100">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50">
-                {['Name', 'Zone', 'Floor', 'Status', 'Amenities', ''].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs text-gray-500 font-medium border-b border-gray-200">{h}</th>
+                {['Code', 'Desk', 'Zone', 'Date', 'Email', 'Status'].map((h) => (
+                  <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 border-b border-gray-200">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {desks.map((d) => (
-                <tr key={d.id} className="border-b border-gray-100">
-                  <td className="px-4 py-3 font-medium">{d.name}</td>
-                  <td className="px-4 py-3 text-gray-500">{d.zone}</td>
-                  <td className="px-4 py-3 text-gray-500">{d.floorId}</td>
+              {latest.length === 0 && (
+                <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400">No bookings yet.</td></tr>
+              )}
+              {latest.map((b) => (
+                <tr key={b.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                  <td className="px-4 py-3 font-mono text-xs text-gray-500">BK-{b.id.toString().padStart(6, '0')}</td>
+                  <td className="px-4 py-3 font-medium text-gray-900">{b.desk?.name ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-500">{b.desk?.zone ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDate(b.bookingDate)}</td>
+                  <td className="px-4 py-3 text-gray-500">{b.userEmail}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-1 rounded-full ${d.restricted ? 'bg-purple-50 text-purple-700' : 'bg-green-50 text-green-700'}`}>
-                      {d.restricted ? 'Restricted' : 'Open'}
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                      b.status === 'CONFIRMED' ? 'bg-green-50 text-green-700' :
+                      b.status === 'CANCELLED' ? 'bg-red-50 text-red-700' :
+                      'bg-gray-100 text-gray-600'
+                    }`}>
+                      {b.status}
                     </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      {(['hasMonitor', 'hasKeyboard', 'hasPedestal'] as const).map((field) => {
-                        const label = field === 'hasMonitor' ? 'Mon' : field === 'hasKeyboard' ? 'KB' : 'Ped';
-                        return (
-                          <button
-                            key={field}
-                            onClick={() => toggleAmenity(d.id, field, d[field])}
-                            className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors ${d[field] ? 'bg-[#1e3a5f] text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
-                          >
-                            {label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => remove(d.id)} className="px-2.5 py-1 bg-red-50 text-red-700 rounded text-xs hover:bg-red-100">Remove</button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {desks.length === 0 && <p className="text-center text-gray-400 py-8">No desks yet.</p>}
       </div>
     </div>
   );

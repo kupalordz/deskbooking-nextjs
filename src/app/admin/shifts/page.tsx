@@ -42,10 +42,10 @@ export default function AdminShiftsPage() {
   const inputClass = 'px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]';
 
   return (
-    <div className="px-4 py-6 sm:px-8 sm:py-8 md:px-12 md:py-12 max-w-3xl mx-auto">
-      <div className="flex items-center gap-4 mb-6">
-        <a href="/admin" className="text-sm text-[#1e3a5f] hover:underline">← Admin</a>
-        <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight">Shift Schedules</h2>
+    <div className="p-5 sm:p-7 md:p-8 max-w-3xl">
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-gray-900">Shift Schedules</h2>
+        <p className="text-sm text-gray-400 mt-0.5">Define work shifts and active days</p>
       </div>
 
       {msg && <div className="p-3 bg-blue-50 text-blue-800 rounded-lg mb-4 text-sm">{msg}</div>}
