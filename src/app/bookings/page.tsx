@@ -1,11 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 type Booking = {
   id: number;
   bookingDate: string;
   status: string;
-  qrToken: string;
   desk: { name: string; floorId: string };
 };
 
@@ -21,6 +21,8 @@ export default function BookingsPage() {
   const [parkingBookings, setParkingBookings] = useState<ParkingBooking[]>([]);
   const [tab, setTab] = useState<'desk' | 'parking'>('desk');
   const [msg, setMsg] = useState('');
+  const router = useRouter();
+  const today = new Date().toISOString().split('T')[0];
 
   function load() {
     fetch('/api/bookings').then((r) => r.json()).then((d) => setBookings(Array.isArray(d) ? d : [])).catch(() => setBookings([]));
@@ -33,24 +35,8 @@ export default function BookingsPage() {
     fetch('/api/bookings/' + id, { method: 'DELETE' }).then(() => { setMsg('Cancelled'); load(); });
   }
 
-  function checkin(id: number) {
-    fetch('/api/bookings/' + id, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'checkin' }),
-    }).then((r) => { if (r.ok) { setMsg('Checked in!'); load(); } else { setMsg('Check-in failed'); } });
-  }
-
   function cancelParking(id: number) {
     fetch('/api/parking-bookings/' + id, { method: 'DELETE' }).then(() => { setMsg('Cancelled'); load(); });
-  }
-
-  function checkinParking(id: number) {
-    fetch('/api/parking-bookings/' + id, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'checkin' }),
-    }).then((r) => { if (r.ok) { setMsg('Checked in!'); load(); } else { setMsg('Check-in failed'); } });
   }
 
   const statusStyle = (s: string) => {
@@ -101,8 +87,18 @@ export default function BookingsPage() {
                   <span className={`inline-block mt-2 text-xs font-medium px-2.5 py-1 rounded-full ${statusStyle(b.status)}`}>{b.status}</span>
                 </div>
                 <div className="flex gap-2">
-                  {b.status === 'CONFIRMED' && (
-                    <button onClick={() => checkin(b.id)} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">Check In</button>
+                  {b.status === 'CONFIRMED' && b.bookingDate === today && (
+                    <button
+                      onClick={() => router.push('/qr')}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
+                    >
+                      Check In
+                    </button>
+                  )}
+                  {b.status === 'CONFIRMED' && b.bookingDate !== today && (
+                    <span className="px-4 py-2 text-xs text-gray-400 bg-gray-50 rounded-lg ring-1 ring-gray-200">
+                      Check-in on {b.bookingDate}
+                    </span>
                   )}
                   {b.status !== 'CANCELLED' && b.status !== 'CHECKED_IN' && (
                     <button onClick={() => cancel(b.id)} className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Cancel</button>
@@ -128,13 +124,23 @@ export default function BookingsPage() {
               <div key={b.id} className="bg-white rounded-2xl p-5 shadow-sm ring-1 ring-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <p className="font-semibold text-gray-900">{b.spot?.name}</p>
-                  <p className="text-sm text-gray-500">{b.spot?.type === 'CAR' ? '🚗 Car' : '🏍️ Motorcycle'} · {b.spot?.zone}</p>
+                  <p className="text-sm text-gray-500">{b.spot?.type === 'CAR' ? 'Car' : 'Motorcycle'} · {b.spot?.zone}</p>
                   <p className="text-sm text-gray-500">Date: {b.bookingDate}</p>
                   <span className={`inline-block mt-2 text-xs font-medium px-2.5 py-1 rounded-full ${statusStyle(b.status)}`}>{b.status}</span>
                 </div>
                 <div className="flex gap-2">
-                  {b.status === 'CONFIRMED' && (
-                    <button onClick={() => checkinParking(b.id)} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">Check In</button>
+                  {b.status === 'CONFIRMED' && b.bookingDate === today && (
+                    <button
+                      onClick={() => router.push('/qr')}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
+                    >
+                      Check In
+                    </button>
+                  )}
+                  {b.status === 'CONFIRMED' && b.bookingDate !== today && (
+                    <span className="px-4 py-2 text-xs text-gray-400 bg-gray-50 rounded-lg ring-1 ring-gray-200">
+                      Check-in on {b.bookingDate}
+                    </span>
                   )}
                   {b.status !== 'CANCELLED' && b.status !== 'CHECKED_IN' && (
                     <button onClick={() => cancelParking(b.id)} className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Cancel</button>
