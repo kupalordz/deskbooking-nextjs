@@ -199,7 +199,7 @@ export default function FloorPlanBuilder() {
             <select value={locCountry} onChange={(e) => { setLocCountry(e.target.value); setLocCity(''); setLocBuilding(''); setLocFloor(''); }}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
               <option value="">Select…</option>
-              {[...new Set(locations.map((l) => l.country).filter(Boolean))].map((v) => (
+              {locations.map((l) => l.country).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => (
                 <option key={v} value={v}>{v}</option>
               ))}
             </select>
@@ -209,7 +209,7 @@ export default function FloorPlanBuilder() {
             <select value={locCity} onChange={(e) => { setLocCity(e.target.value); setLocBuilding(''); setLocFloor(''); }}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" disabled={!locCountry}>
               <option value="">Select…</option>
-              {[...new Set(locations.filter((l) => l.country === locCountry).map((l) => l.city).filter(Boolean))].map((v) => (
+              {locations.filter((l) => l.country === locCountry).map((l) => l.city).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => (
                 <option key={v} value={v}>{v}</option>
               ))}
             </select>
@@ -219,7 +219,7 @@ export default function FloorPlanBuilder() {
             <select value={locBuilding} onChange={(e) => { setLocBuilding(e.target.value); setLocFloor(''); }}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" disabled={!locCity}>
               <option value="">Select…</option>
-              {[...new Set(locations.filter((l) => l.country === locCountry && l.city === locCity).map((l) => l.building).filter(Boolean))].map((v) => (
+              {locations.filter((l) => l.country === locCountry && l.city === locCity).map((l) => l.building).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => (
                 <option key={v} value={v}>{v}</option>
               ))}
             </select>
@@ -229,7 +229,7 @@ export default function FloorPlanBuilder() {
             <select value={locFloor} onChange={(e) => setLocFloor(e.target.value)}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" disabled={!locBuilding}>
               <option value="">Select…</option>
-              {[...new Set(locations.filter((l) => l.country === locCountry && l.city === locCity && l.building === locBuilding).map((l) => l.floor).filter(Boolean))].map((v) => (
+              {locations.filter((l) => l.country === locCountry && l.city === locCity && l.building === locBuilding).map((l) => l.floor).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => (
                 <option key={v} value={v}>{v}</option>
               ))}
             </select>
