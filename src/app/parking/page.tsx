@@ -64,7 +64,7 @@ export default function ParkingPage() {
   }
 
   const filtered = spots.filter((s) => s.type === tab);
-  const zones = [...new Set(filtered.map((s) => s.zone))].sort();
+  const zones = Array.from(new Set(filtered.map((s) => s.zone))).sort();
 
   return (
     <div className="px-4 py-6 sm:px-8 sm:py-8 md:px-12 md:py-12 max-w-4xl mx-auto">
