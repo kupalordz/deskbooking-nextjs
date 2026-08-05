@@ -40,6 +40,14 @@ export default function FloorMap() {
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('17:00');
 
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const check = () => setIsDesktop(window.innerWidth >= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   const crossDay = endTime <= startTime;
   const endDate = crossDay ? addOneDay(bookDate) : bookDate;
 
@@ -176,14 +184,13 @@ export default function FloorMap() {
                         }}
                         title={d.name}
                       >
-                        <div
-                          className={`rounded-full transition-all duration-150 ${
-                            selected?.id === d.id
-                              ? 'w-[7px] h-[7px] md:w-[10px] md:h-[10px]'
-                              : 'w-[5px] h-[5px] md:w-[8px] md:h-[8px]'
-                          }`}
-                          style={{ background: pinColor(d) }}
-                        />
+                        <div style={{
+                          width:  selected?.id === d.id ? (isDesktop ? 10 : 7) : (isDesktop ? 8 : 5),
+                          height: selected?.id === d.id ? (isDesktop ? 10 : 7) : (isDesktop ? 8 : 5),
+                          borderRadius: '50%',
+                          background: pinColor(d),
+                          transition: 'width 0.15s, height 0.15s',
+                        }} />
                       </div>
                     ))}
                   </div>
