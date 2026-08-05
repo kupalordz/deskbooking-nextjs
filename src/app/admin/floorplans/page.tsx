@@ -206,9 +206,7 @@ export default function FloorPlanBuilder() {
                 }}
                 className="group"
               >
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold shadow ${d.restricted ? 'bg-purple-600' : 'bg-green-600'}`}>
-                  {d.name.slice(-2)}
-                </div>
+                <div className={`w-3 h-3 rounded-full shadow ${d.restricted ? 'bg-purple-600' : 'bg-green-600'}`} />
                 <button
                   onClick={(e) => { e.stopPropagation(); removeDesk(d.id); }}
                   className="hidden group-hover:flex absolute -top-2 -right-2 w-4 h-4 bg-red-600 text-white rounded-full items-center justify-center text-[9px]"
