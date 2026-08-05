@@ -28,6 +28,23 @@ function fmtDate(d: string) {
   return `${months[parseInt(m) - 1]} ${parseInt(day)}`;
 }
 
+function getDurationMinutes(start: string, end: string): number {
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  const s = sh * 60 + sm;
+  const e = eh * 60 + em;
+  return e >= s ? e - s : 24 * 60 - s + e;
+}
+
+function clampEndTime(start: string, end: string): string {
+  if (getDurationMinutes(start, end) > 480) {
+    const [sh, sm] = start.split(':').map(Number);
+    const t = (sh * 60 + sm + 480) % 1440;
+    return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+  }
+  return end;
+}
+
 const inputCls = 'w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent bg-white';
 const labelCls = 'block text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5';
 
@@ -55,6 +72,17 @@ export default function FloorMap() {
 
   const crossDay = endTime <= startTime;
   const endDate = crossDay ? addOneDay(bookDate) : bookDate;
+  const durationMin = getDurationMinutes(startTime, endTime);
+  const atMax = durationMin >= 480;
+  const durationLabel = `${Math.floor(durationMin / 60)}h${durationMin % 60 > 0 ? ` ${durationMin % 60}m` : ''}`;
+
+  function onStartChange(val: string) {
+    setStartTime(val);
+    setEndTime((prev) => clampEndTime(val, prev));
+  }
+  function onEndChange(val: string) {
+    setEndTime(clampEndTime(startTime, val));
+  }
 
   function load() {
     fetch('/api/floors').then((r) => r.json()).then((d) => {
@@ -257,15 +285,14 @@ export default function FloorMap() {
               </div>
               <div className="w-24">
                 <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">Start</p>
-                <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)}
+                <input type="time" value={startTime} onChange={(e) => onStartChange(e.target.value)}
                   className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]" />
               </div>
               <div className="w-24">
-                <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">
-                  End {crossDay && <span className="text-orange-500 normal-case font-normal">+1d ({fmtDate(endDate)})</span>}
-                </p>
-                <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)}
+                <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">End</p>
+                <input type="time" value={endTime} onChange={(e) => onEndChange(e.target.value)}
                   className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]" />
+                {crossDay && <p className="text-[9px] text-orange-500 mt-0.5">{fmtDate(endDate)}</p>}
               </div>
             </div>
 
@@ -347,18 +374,18 @@ export default function FloorMap() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Start</label>
-                    <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className={inputCls} />
+                    <input type="time" value={startTime} onChange={(e) => onStartChange(e.target.value)} className={inputCls} />
                   </div>
                   <div>
-                    <label className={labelCls}>
-                      End {crossDay && <span className="text-orange-400 normal-case font-normal tracking-normal">+1d</span>}
-                    </label>
-                    <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className={inputCls} />
+                    <label className={labelCls}>End</label>
+                    <input type="time" value={endTime} onChange={(e) => onEndChange(e.target.value)} className={inputCls} />
+                    {crossDay && <p className="text-[11px] text-orange-500 mt-1.5">{fmtDate(endDate)} (next day)</p>}
                   </div>
                 </div>
-                {crossDay && (
-                  <p className="text-xs text-orange-500 -mt-2">Ends {fmtDate(endDate)}</p>
-                )}
+                <div className="flex items-center justify-between text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-2">
+                  <span>{durationLabel}</span>
+                  {atMax && <span className="text-orange-500 font-medium">8h max</span>}
+                </div>
               </div>
 
               {/* Actions */}

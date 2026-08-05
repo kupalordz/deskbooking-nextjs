@@ -37,6 +37,23 @@ function fmtDate(d: string) {
   return `${months[parseInt(m) - 1]} ${parseInt(day)}`;
 }
 
+function getDurationMinutes(start: string, end: string): number {
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  const s = sh * 60 + sm;
+  const e = eh * 60 + em;
+  return e >= s ? e - s : 24 * 60 - s + e;
+}
+
+function clampEndTime(start: string, end: string): string {
+  if (getDurationMinutes(start, end) > 480) {
+    const [sh, sm] = start.split(':').map(Number);
+    const t = (sh * 60 + sm + 480) % 1440;
+    return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+  }
+  return end;
+}
+
 export default function ParkingPage() {
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
   const [floors, setFloors] = useState<Floor[]>([]);
@@ -55,6 +72,17 @@ export default function ParkingPage() {
 
   const crossDay = endTime <= startTime;
   const endDate = crossDay ? addOneDay(date) : date;
+  const durationMin = getDurationMinutes(startTime, endTime);
+  const atMax = durationMin >= 480;
+  const durationLabel = `${Math.floor(durationMin / 60)}h${durationMin % 60 > 0 ? ` ${durationMin % 60}m` : ''}`;
+
+  function onStartChange(val: string) {
+    setStartTime(val);
+    setEndTime((prev) => clampEndTime(val, prev));
+  }
+  function onEndChange(val: string) {
+    setEndTime(clampEndTime(startTime, val));
+  }
 
   function load() {
     Promise.all([
@@ -130,20 +158,25 @@ export default function ParkingPage() {
             <input
               type="time"
               value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
+              onChange={(e) => onStartChange(e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
             />
           </div>
           <div>
-            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">
-              End {crossDay && <span className="text-orange-500 normal-case font-normal">· ends {fmtDate(endDate)}</span>}
-            </p>
+            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">End</p>
             <input
               type="time"
               value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
+              onChange={(e) => onEndChange(e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
             />
+            {crossDay && <p className="text-[10px] text-orange-500 mt-1">{fmtDate(endDate)} (next day)</p>}
+          </div>
+          <div className="self-end pb-0.5">
+            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">Duration</p>
+            <p className="text-sm font-medium text-gray-600">
+              {durationLabel}{atMax && <span className="ml-1 text-xs text-orange-500">max</span>}
+            </p>
           </div>
         </div>
       </div>
