@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 const navItems = [
   { href: '/', label: 'Home' },
   { href: '/floormap', label: 'Floor Map' },
+  { href: '/parking', label: 'Parking' },
   { href: '/bookings', label: 'My Bookings' },
   { href: '/qr', label: 'Check In' },
   { href: '/admin', label: 'Admin' },

@@ -38,3 +38,25 @@ model Floor {
   name     String
   imageUrl String
 }
+
+model ParkingSpot {
+  id       Int              @id @default(autoincrement())
+  name     String
+  type     String           // "CAR" or "MOTORCYCLE"
+  zone     String
+  active   Boolean          @default(true)
+  bookings ParkingBooking[]
+}
+
+model ParkingBooking {
+  id          Int         @id @default(autoincrement())
+  spot        ParkingSpot @relation(fields: [spotId], references: [id])
+  spotId      Int
+  userId      String
+  userEmail   String
+  bookingDate String
+  status      String      @default("CONFIRMED")
+  qrToken     String      @default(uuid())
+  checkedInAt DateTime?
+  createdAt   DateTime    @default(now())
+}

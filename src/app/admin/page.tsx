@@ -59,12 +59,14 @@ export default function AdminPage() {
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight">Admin - Manage Desks</h2>
         
-        <a
-          href="/admin/floorplans"
-          className="px-4 py-2 bg-[#1e3a5f] text-white rounded-lg text-sm font-medium hover:bg-[#16304d]"
-        >
-          Floor Plan Builder
-        </a>
+        <div className="flex gap-2">
+          <a href="/admin/parking" className="px-4 py-2 bg-white text-[#1e3a5f] ring-1 ring-[#1e3a5f] rounded-lg text-sm font-medium hover:bg-gray-50">
+            Parking Spots
+          </a>
+          <a href="/admin/floorplans" className="px-4 py-2 bg-[#1e3a5f] text-white rounded-lg text-sm font-medium hover:bg-[#16304d]">
+            Floor Plan Builder
+          </a>
+        </div>
       </div>
 
       {msg && <div className="p-3 bg-green-50 text-green-800 rounded-lg mb-4 text-sm">{msg}</div>}
