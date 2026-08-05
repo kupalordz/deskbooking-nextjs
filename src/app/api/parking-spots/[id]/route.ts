@@ -32,6 +32,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  await prisma.parkingSpot.update({ where: { id: Number(id) }, data: { active: false } });
+  await prisma.parkingBooking.deleteMany({ where: { spotId: Number(id) } });
+  await prisma.parkingSpot.delete({ where: { id: Number(id) } });
   return NextResponse.json({ ok: true });
 }
