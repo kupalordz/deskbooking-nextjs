@@ -14,7 +14,7 @@ type Desk = {
   hasKeyboard: boolean;
   hasPedestal: boolean;
 };
-type Option = { id: number; category: string; value: string };
+type Location = { country: string; city: string; building: string; floor: string };
 
 function slugify(s: string) {
   return s.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
@@ -25,7 +25,7 @@ export default function FloorPlanBuilder() {
   const [selectedFloor, setSelectedFloor] = useState<Floor | null>(null);
   const [floorDesks, setFloorDesks] = useState<Desk[]>([]);
   const [allDesks, setAllDesks] = useState<Desk[]>([]);
-  const [dropdownOptions, setDropdownOptions] = useState<Option[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [msg, setMsg] = useState('');
   const [uploading, setUploading] = useState(false);
   const [dragId, setDragId] = useState<number | null>(null);
@@ -56,11 +56,11 @@ export default function FloorPlanBuilder() {
     });
   }
 
-  function loadDropdownOptions() {
-    fetch('/api/dropdown-options').then((r) => r.json()).then((d) => setDropdownOptions(Array.isArray(d) ? d : []));
+  function loadLocations() {
+    fetch('/api/locations').then((r) => r.json()).then((d) => setLocations(Array.isArray(d) ? d : []));
   }
 
-  useEffect(() => { loadFloors(); loadAllDesks(); loadDropdownOptions(); }, []);
+  useEffect(() => { loadFloors(); loadAllDesks(); loadLocations(); }, []);
 
   useEffect(() => {
     if (locBuilding && locFloor) {
@@ -199,8 +199,8 @@ export default function FloorPlanBuilder() {
             <select value={locCountry} onChange={(e) => { setLocCountry(e.target.value); setLocCity(''); setLocBuilding(''); setLocFloor(''); }}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
               <option value="">Select…</option>
-              {dropdownOptions.filter((o) => o.category === 'country').map((o) => (
-                <option key={o.id} value={o.value}>{o.value}</option>
+              {[...new Set(locations.map((l) => l.country).filter(Boolean))].map((v) => (
+                <option key={v} value={v}>{v}</option>
               ))}
             </select>
           </div>
@@ -209,8 +209,8 @@ export default function FloorPlanBuilder() {
             <select value={locCity} onChange={(e) => { setLocCity(e.target.value); setLocBuilding(''); setLocFloor(''); }}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" disabled={!locCountry}>
               <option value="">Select…</option>
-              {dropdownOptions.filter((o) => o.category === 'city').map((o) => (
-                <option key={o.id} value={o.value}>{o.value}</option>
+              {[...new Set(locations.filter((l) => l.country === locCountry).map((l) => l.city).filter(Boolean))].map((v) => (
+                <option key={v} value={v}>{v}</option>
               ))}
             </select>
           </div>
@@ -219,8 +219,8 @@ export default function FloorPlanBuilder() {
             <select value={locBuilding} onChange={(e) => { setLocBuilding(e.target.value); setLocFloor(''); }}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" disabled={!locCity}>
               <option value="">Select…</option>
-              {dropdownOptions.filter((o) => o.category === 'building').map((o) => (
-                <option key={o.id} value={o.value}>{o.value}</option>
+              {[...new Set(locations.filter((l) => l.country === locCountry && l.city === locCity).map((l) => l.building).filter(Boolean))].map((v) => (
+                <option key={v} value={v}>{v}</option>
               ))}
             </select>
           </div>
@@ -229,8 +229,8 @@ export default function FloorPlanBuilder() {
             <select value={locFloor} onChange={(e) => setLocFloor(e.target.value)}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" disabled={!locBuilding}>
               <option value="">Select…</option>
-              {dropdownOptions.filter((o) => o.category === 'floor').map((o) => (
-                <option key={o.id} value={o.value}>{o.value}</option>
+              {[...new Set(locations.filter((l) => l.country === locCountry && l.city === locCity && l.building === locBuilding).map((l) => l.floor).filter(Boolean))].map((v) => (
+                <option key={v} value={v}>{v}</option>
               ))}
             </select>
           </div>
