@@ -41,6 +41,7 @@ export default function FloorPlanBuilder() {
   const [newFloorId, setNewFloorId] = useState('');
   const [newFloorName, setNewFloorName] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showUpload, setShowUpload] = useState(false);
 
   function loadFloors() {
     fetch('/api/floors').then((r) => r.json()).then((d) => setFloors(Array.isArray(d) ? d : []));
@@ -182,7 +183,7 @@ export default function FloorPlanBuilder() {
   });
 
   return (
-    <div className="p-5 sm:p-7 md:p-8 max-w-6xl">
+    <div className="p-5 sm:p-7 md:p-8">
       <div className="mb-6">
         <h2 className="text-xl font-bold text-gray-900">Floor Plan Builder</h2>
         <p className="text-sm text-gray-400 mt-0.5">Upload floor maps and place desk pins</p>
@@ -191,75 +192,88 @@ export default function FloorPlanBuilder() {
       {msg && <div className="p-3 bg-green-50 text-green-800 rounded-lg mb-4 text-sm">{msg}</div>}
 
       {/* Upload */}
-      <div className="bg-white rounded-2xl p-5 md:p-6 mb-6 shadow-sm ring-1 ring-gray-100">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">Upload new floor plan</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-          <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">Country</label>
-            <select value={locCountry} onChange={(e) => { setLocCountry(e.target.value); setLocCity(''); setLocBuilding(''); setLocFloor(''); }}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
-              <option value="">Select…</option>
-              {locations.map((l) => l.country).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => (
-                <option key={v} value={v}>{v}</option>
-              ))}
-            </select>
+      <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 mb-6">
+        <button
+          onClick={() => setShowUpload((v) => !v)}
+          className="w-full flex items-center justify-between px-5 py-4 text-left"
+        >
+          <span className="text-sm font-semibold text-gray-900">Upload new floor plan</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+            className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${showUpload ? 'rotate-180' : ''}`}>
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+        {showUpload ? (
+          <div className="px-5 pb-5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+              <div>
+                <label className="text-xs text-gray-500 font-medium block mb-1">Country</label>
+                <select value={locCountry} onChange={(e) => { setLocCountry(e.target.value); setLocCity(''); setLocBuilding(''); setLocFloor(''); }}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+                  <option value="">Select…</option>
+                  {locations.map((l) => l.country).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => (
+                    <option key={v} value={v}>{v}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 font-medium block mb-1">City</label>
+                <select value={locCity} onChange={(e) => { setLocCity(e.target.value); setLocBuilding(''); setLocFloor(''); }}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" disabled={!locCountry}>
+                  <option value="">Select…</option>
+                  {locations.filter((l) => l.country === locCountry).map((l) => l.city).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => (
+                    <option key={v} value={v}>{v}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 font-medium block mb-1">Building</label>
+                <select value={locBuilding} onChange={(e) => { setLocBuilding(e.target.value); setLocFloor(''); }}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" disabled={!locCity}>
+                  <option value="">Select…</option>
+                  {locations.filter((l) => l.country === locCountry && l.city === locCity).map((l) => l.building).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => (
+                    <option key={v} value={v}>{v}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 font-medium block mb-1">Floor</label>
+                <select value={locFloor} onChange={(e) => setLocFloor(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" disabled={!locBuilding}>
+                  <option value="">Select…</option>
+                  {locations.filter((l) => l.country === locCountry && l.city === locCity && l.building === locBuilding).map((l) => l.floor).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => (
+                    <option key={v} value={v}>{v}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+              <div>
+                <label className="text-xs text-gray-500 font-medium block mb-1">Floor ID</label>
+                <input className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Auto-filled" value={newFloorId} onChange={(e) => setNewFloorId(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 font-medium block mb-1">Floor Name</label>
+                <input className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Auto-filled" value={newFloorName} onChange={(e) => setNewFloorName(e.target.value)} />
+              </div>
+              <div className="flex flex-col justify-end">
+                <label className="text-xs text-gray-500 font-medium block mb-1">Floor Plan Image</label>
+                <input type="file" accept="image/*" onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)} className="text-sm" />
+                {selectedFile && <p className="text-xs text-gray-400 mt-1 truncate">{selectedFile.name}</p>}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleUpload}
+                disabled={uploading}
+                className="px-5 py-2 bg-[#1a2535] text-white text-sm font-medium rounded-lg hover:bg-[#243148] disabled:opacity-50"
+              >
+                {uploading ? 'Uploading…' : 'Upload Floor Plan'}
+              </button>
+              {uploading && <p className="text-sm text-gray-400">Please wait…</p>}
+            </div>
           </div>
-          <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">City</label>
-            <select value={locCity} onChange={(e) => { setLocCity(e.target.value); setLocBuilding(''); setLocFloor(''); }}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" disabled={!locCountry}>
-              <option value="">Select…</option>
-              {locations.filter((l) => l.country === locCountry).map((l) => l.city).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => (
-                <option key={v} value={v}>{v}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">Building</label>
-            <select value={locBuilding} onChange={(e) => { setLocBuilding(e.target.value); setLocFloor(''); }}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" disabled={!locCity}>
-              <option value="">Select…</option>
-              {locations.filter((l) => l.country === locCountry && l.city === locCity).map((l) => l.building).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => (
-                <option key={v} value={v}>{v}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">Floor</label>
-            <select value={locFloor} onChange={(e) => setLocFloor(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white" disabled={!locBuilding}>
-              <option value="">Select…</option>
-              {locations.filter((l) => l.country === locCountry && l.city === locCity && l.building === locBuilding).map((l) => l.floor).filter((v, i, a) => v && a.indexOf(v) === i).map((v) => (
-                <option key={v} value={v}>{v}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-          <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">Floor ID</label>
-            <input className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Auto-filled" value={newFloorId} onChange={(e) => setNewFloorId(e.target.value)} />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">Floor Name</label>
-            <input className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Auto-filled" value={newFloorName} onChange={(e) => setNewFloorName(e.target.value)} />
-          </div>
-          <div className="flex flex-col justify-end">
-            <label className="text-xs text-gray-500 font-medium block mb-1">Floor Plan Image</label>
-            <input type="file" accept="image/*" onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)} className="text-sm" />
-            {selectedFile && <p className="text-xs text-gray-400 mt-1 truncate">{selectedFile.name}</p>}
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleUpload}
-            disabled={uploading}
-            className="px-5 py-2 bg-[#1a2535] text-white text-sm font-medium rounded-lg hover:bg-[#243148] disabled:opacity-50"
-          >
-            {uploading ? 'Uploading…' : 'Upload Floor Plan'}
-          </button>
-          {uploading && <p className="text-sm text-gray-400">Please wait…</p>}
-        </div>
+        ) : null}
       </div>
 
       {/* Floor selector */}
