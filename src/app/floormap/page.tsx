@@ -181,9 +181,9 @@ export default function FloorMap() {
 
           {/* Legend — desktop only */}
           <div className="hidden md:flex items-center gap-3 text-[11px] text-gray-400 flex-shrink-0 pr-3 border-r border-gray-100">
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />Available</span>
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />Booked</span>
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0" />Restricted</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 h-2.5 rounded-[2px] bg-green-500 flex-shrink-0" />Available</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 h-2.5 rounded-[2px] bg-red-500 flex-shrink-0" />Booked</span>
+            <span className="flex items-center gap-1.5"><span className="w-4 h-2.5 rounded-[2px] bg-purple-500 flex-shrink-0" />Restricted</span>
           </div>
 
           {/* Panel toggle — desktop only */}
@@ -236,10 +236,11 @@ export default function FloorMap() {
                           title={d.name}
                         >
                           <div style={{
-                            width:  selected?.id === d.id ? (isDesktop ? 10 : 7) : (isDesktop ? 8 : 5),
-                            height: selected?.id === d.id ? (isDesktop ? 10 : 7) : (isDesktop ? 8 : 5),
-                            borderRadius: '50%',
+                            width:  selected?.id === d.id ? (isDesktop ? 20 : 13) : (isDesktop ? 16 : 10),
+                            height: selected?.id === d.id ? (isDesktop ? 12 : 8)  : (isDesktop ? 10 : 6),
+                            borderRadius: 2,
                             background: pinColor(d),
+                            boxShadow: selected?.id === d.id ? `0 0 0 1.5px white, 0 0 0 3px ${pinColor(d)}` : undefined,
                             transition: 'width 0.15s, height 0.15s',
                           }} />
                         </div>
@@ -355,11 +356,11 @@ export default function FloorMap() {
                 <div className="mt-3">
                   {isBooked ? (
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-red-700 bg-red-50 px-2.5 py-1 rounded-full">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" /> Booked on {fmtDate(bookDate)}
+                      <span className="w-3 h-1.5 rounded-[2px] bg-red-500 flex-shrink-0" /> Booked on {fmtDate(bookDate)}
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1 rounded-full">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" /> Available
+                      <span className="w-3 h-1.5 rounded-[2px] bg-green-500 flex-shrink-0" /> Available
                     </span>
                   )}
                 </div>
