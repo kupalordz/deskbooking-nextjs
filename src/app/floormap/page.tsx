@@ -244,10 +244,7 @@ export default function FloorMap() {
                             borderRadius: 2,
                             background: pinColor(d),
                             transform: `rotate(${d.pinRotation ?? 0}deg)`,
-                            boxShadow: selected?.id === d.id ? `0 0 0 1.5px white, 0 0 0 3px ${pinColor(d)}` : undefined,
-                            outline: selected?.id === d.id ? `2px solid ${pinColor(d)}` : undefined,
-                            outlineOffset: selected?.id === d.id ? 3 : undefined,
-                            transition: 'box-shadow 0.15s',
+                            opacity: selected?.id === d.id ? 0.7 : 1,
                           }} />
                         </div>
                       ))}

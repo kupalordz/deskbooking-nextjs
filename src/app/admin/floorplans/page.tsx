@@ -407,8 +407,7 @@ export default function FloorPlanBuilder() {
                       borderRadius: 2,
                       background: d.restricted ? '#7c3aed' : '#16a34a',
                       transform: `rotate(${pr}deg)`,
-                      boxShadow: isSelected ? '0 0 0 2px white, 0 0 0 4px #3b82f6' : undefined,
-                      transition: 'box-shadow 0.15s',
+                      opacity: isSelected ? 0.7 : 1,
                     }} />
                     <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-gray-900 text-white text-[10px] rounded px-1.5 py-0.5 whitespace-nowrap pointer-events-none z-30">
                       {d.name}
@@ -480,7 +479,6 @@ export default function FloorPlanBuilder() {
                     borderRadius: 2,
                     background: selectedPinDesk?.restricted ? '#7c3aed' : '#16a34a',
                     transform: `rotate(${editPin.r}deg)`,
-                    boxShadow: '0 0 0 2px white, 0 0 0 4px #3b82f6',
                   }} />
                 </div>
 
