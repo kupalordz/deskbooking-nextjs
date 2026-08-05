@@ -238,14 +238,31 @@ export default function FloorMap() {
                           }}
                           title={d.name}
                         >
-                          <div style={{
-                            width:  isDesktop ? (d.pinWidth ?? 16) : Math.round((d.pinWidth ?? 16) * 0.65),
-                            height: isDesktop ? (d.pinHeight ?? 10) : Math.round((d.pinHeight ?? 10) * 0.65),
-                            borderRadius: 2,
-                            background: pinColor(d),
-                            transform: `rotate(${d.pinRotation ?? 0}deg)`,
-                            opacity: selected?.id === d.id ? 0.7 : 1,
-                          }} />
+                          {(() => {
+                            const pw = isDesktop ? (d.pinWidth ?? 16) : Math.round((d.pinWidth ?? 16) * 0.65);
+                            const ph = isDesktop ? (d.pinHeight ?? 10) : Math.round((d.pinHeight ?? 10) * 0.65);
+                            return (
+                              <div style={{
+                                width: pw, height: ph, borderRadius: 2,
+                                background: pinColor(d),
+                                transform: `rotate(${d.pinRotation ?? 0}deg)`,
+                                opacity: selected?.id === d.id ? 0.7 : 1,
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                overflow: 'hidden', padding: '0 3px', boxSizing: 'border-box',
+                              }}>
+                                {pw >= 30 && ph >= 14 && (
+                                  <span style={{ fontSize: Math.min(9, Math.floor(ph * 0.52)), fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', lineHeight: 1, letterSpacing: '0.01em' }}>
+                                    {d.name}
+                                  </span>
+                                )}
+                                {pw >= 30 && ph >= 22 && d.zone && (
+                                  <span style={{ fontSize: Math.min(7, Math.floor(ph * 0.35)), color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', lineHeight: 1.2 }}>
+                                    {d.zone}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       ))}
                     </div>

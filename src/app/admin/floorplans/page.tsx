@@ -468,7 +468,25 @@ export default function FloorPlanBuilder() {
                       background: d.restricted ? '#7c3aed' : '#16a34a',
                       transform: `rotate(${pr}deg)`,
                       opacity: isSelected ? 0.7 : 1,
-                    }} />
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden',
+                      padding: '0 3px',
+                      boxSizing: 'border-box',
+                    }}>
+                      {pw >= 30 && ph >= 14 && (
+                        <span style={{ fontSize: Math.min(9, Math.floor(ph * 0.52)), fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', lineHeight: 1, letterSpacing: '0.01em' }}>
+                          {d.name}
+                        </span>
+                      )}
+                      {pw >= 30 && ph >= 22 && d.zone && (
+                        <span style={{ fontSize: Math.min(7, Math.floor(ph * 0.35)), color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', lineHeight: 1.2 }}>
+                          {d.zone}
+                        </span>
+                      )}
+                    </div>
                     <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-gray-900 text-white text-[10px] rounded px-1.5 py-0.5 whitespace-nowrap pointer-events-none z-30">
                       {d.name}
                     </div>
@@ -539,7 +557,25 @@ export default function FloorPlanBuilder() {
                     borderRadius: 2,
                     background: selectedPinDesk?.restricted ? '#7c3aed' : '#16a34a',
                     transform: `rotate(${editPin.r}deg)`,
-                  }} />
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    padding: '0 3px',
+                    boxSizing: 'border-box',
+                  }}>
+                    {editPin.w >= 30 && editPin.h >= 14 && (
+                      <span style={{ fontSize: Math.min(9, Math.floor(editPin.h * 0.52)), fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', lineHeight: 1 }}>
+                        {selectedPinDesk?.name}
+                      </span>
+                    )}
+                    {editPin.w >= 30 && editPin.h >= 22 && selectedPinDesk?.zone && (
+                      <span style={{ fontSize: Math.min(7, Math.floor(editPin.h * 0.35)), color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', lineHeight: 1.2 }}>
+                        {selectedPinDesk.zone}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Width */}
