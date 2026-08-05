@@ -178,8 +178,8 @@ export default function FloorMap() {
                       >
                         <div
                           style={{
-                            width: selected?.id === d.id ? 14 : 10,
-                            height: selected?.id === d.id ? 14 : 10,
+                            width: selected?.id === d.id ? 7 : 5,
+                            height: selected?.id === d.id ? 7 : 5,
                             borderRadius: '50%',
                             background: pinColor(d),
                             boxShadow: selected?.id === d.id
