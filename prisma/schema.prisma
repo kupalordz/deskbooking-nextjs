@@ -42,6 +42,14 @@ model Floor {
   imageUrl String
 }
 
+model DropdownOption {
+  id       Int    @id @default(autoincrement())
+  category String
+  value    String
+
+  @@unique([category, value])
+}
+
 model Location {
   id           Int           @id @default(autoincrement())
   country      String
