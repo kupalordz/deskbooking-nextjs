@@ -26,8 +26,8 @@ type ParkingBooking = {
 };
 
 function addOneDay(d: string) {
-  const dt = new Date(d + 'T00:00:00');
-  dt.setDate(dt.getDate() + 1);
+  const dt = new Date(d + 'T00:00:00Z');
+  dt.setUTCDate(dt.getUTCDate() + 1);
   return dt.toISOString().split('T')[0];
 }
 

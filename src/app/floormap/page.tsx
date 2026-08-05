@@ -17,8 +17,8 @@ type Floor = { id: number; floorId: string; name: string; imageUrl: string; isPa
 type BookingSummary = { bookingDate: string; status: string; deskId: number };
 
 function addOneDay(d: string) {
-  const dt = new Date(d + 'T00:00:00');
-  dt.setDate(dt.getDate() + 1);
+  const dt = new Date(d + 'T00:00:00Z');
+  dt.setUTCDate(dt.getUTCDate() + 1);
   return dt.toISOString().split('T')[0];
 }
 
