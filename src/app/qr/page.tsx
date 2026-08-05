@@ -38,17 +38,6 @@ export default function QRPage() {
 
   useEffect(() => { load(); }, []);
 
-  function checkin(id: number) {
-    fetch('/api/bookings/' + id, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'checkin' }),
-    }).then((r) => {
-      if (r.ok) { setMsg('Checked in successfully!'); setMsgType('ok'); load(); }
-      else { setMsg('Check-in failed'); setMsgType('err'); }
-    });
-  }
-
   function cancel(id: number) {
     fetch('/api/bookings/' + id, { method: 'DELETE' }).then(() => { setMsg('Booking cancelled'); setMsgType('ok'); load(); });
   }
@@ -103,13 +92,7 @@ export default function QRPage() {
           </div>
 
           {/* Action buttons */}
-          <div className="px-6 pb-6 flex flex-col gap-3">
-            <button
-              onClick={() => checkin(b.id)}
-              className="w-full py-3 bg-[#1e3a5f] text-white rounded-full font-semibold hover:bg-[#16304d] text-sm"
-            >
-              Check In Now
-            </button>
+          <div className="px-6 pb-6">
             <button
               onClick={() => cancel(b.id)}
               className="w-full py-3 bg-orange-500 text-white rounded-full font-semibold hover:bg-orange-600 text-sm"
