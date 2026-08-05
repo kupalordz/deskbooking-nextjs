@@ -21,9 +21,14 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json();
   const data: Record<string, unknown> = {};
+  if (body.name !== undefined) data.name = body.name;
+  if (body.zone !== undefined) data.zone = body.zone;
+  if (body.floorId !== undefined) data.floorId = body.floorId;
+  if (body.buildingId !== undefined) data.buildingId = body.buildingId;
   if (body.xPosition !== undefined) data.xPosition = body.xPosition;
   if (body.yPosition !== undefined) data.yPosition = body.yPosition;
-  if (body.floorId !== undefined) data.floorId = body.floorId;
+  if (body.active !== undefined) data.active = body.active;
+  if (body.restricted !== undefined) data.restricted = body.restricted;
   if (body.hasMonitor !== undefined) data.hasMonitor = body.hasMonitor;
   if (body.hasKeyboard !== undefined) data.hasKeyboard = body.hasKeyboard;
   if (body.hasPedestal !== undefined) data.hasPedestal = body.hasPedestal;
