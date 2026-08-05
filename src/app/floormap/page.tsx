@@ -177,16 +177,12 @@ export default function FloorMap() {
                         title={d.name}
                       >
                         <div
-                          style={{
-                            width: selected?.id === d.id ? 7 : 5,
-                            height: selected?.id === d.id ? 7 : 5,
-                            borderRadius: '50%',
-                            background: pinColor(d),
-                            boxShadow: selected?.id === d.id
-                              ? '0 0 0 3px rgba(255,255,255,0.9), 0 0 0 5px ' + pinColor(d)
-                              : '0 0 0 2px rgba(255,255,255,0.8)',
-                            transition: 'width 0.15s, height 0.15s',
-                          }}
+                          className={`rounded-full transition-all duration-150 ${
+                            selected?.id === d.id
+                              ? 'w-[7px] h-[7px] md:w-[10px] md:h-[10px]'
+                              : 'w-[5px] h-[5px] md:w-[8px] md:h-[8px]'
+                          }`}
+                          style={{ background: pinColor(d) }}
                         />
                       </div>
                     ))}
