@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 type Booking = {
   id: number;
   bookingDate: string;
+  startTime: string;
+  endTime: string;
   status: string;
   desk: { name: string; floorId: string };
 };
@@ -12,9 +14,24 @@ type Booking = {
 type ParkingBooking = {
   id: number;
   bookingDate: string;
+  startTime: string;
+  endTime: string;
   status: string;
   spot: { name: string; type: string; zone: string };
 };
+
+function fmtDT(iso: string) {
+  if (!iso) return '';
+  const [datePart, timePart] = iso.split('T');
+  if (!timePart) return datePart;
+  const [, m, d] = datePart.split('-');
+  const [h, min] = timePart.split(':');
+  const hour = parseInt(h);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const h12 = hour % 12 || 12;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[parseInt(m) - 1]} ${parseInt(d)}, ${h12}:${min} ${ampm}`;
+}
 
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -82,8 +99,12 @@ export default function BookingsPage() {
               <div key={b.id} className="bg-white rounded-2xl p-5 shadow-sm ring-1 ring-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <p className="font-semibold text-gray-900">{b.desk?.name ?? 'Desk'}</p>
-                  <p className="text-sm text-gray-500">Date: {b.bookingDate}</p>
                   <p className="text-sm text-gray-500">Floor: {b.desk?.floorId}</p>
+                  {b.startTime ? (
+                    <p className="text-sm text-gray-500">{fmtDT(b.startTime)} → {fmtDT(b.endTime)}</p>
+                  ) : (
+                    <p className="text-sm text-gray-500">Date: {b.bookingDate}</p>
+                  )}
                   <span className={`inline-block mt-2 text-xs font-medium px-2.5 py-1 rounded-full ${statusStyle(b.status)}`}>{b.status}</span>
                 </div>
                 <div className="flex gap-2">
@@ -97,7 +118,7 @@ export default function BookingsPage() {
                   )}
                   {b.status === 'CONFIRMED' && b.bookingDate !== today && (
                     <span className="px-4 py-2 text-xs text-gray-400 bg-gray-50 rounded-lg ring-1 ring-gray-200">
-                      Check-in on {b.bookingDate}
+                      Starts {b.startTime ? fmtDT(b.startTime) : b.bookingDate}
                     </span>
                   )}
                   {b.status !== 'CANCELLED' && b.status !== 'CHECKED_IN' && (
@@ -125,7 +146,11 @@ export default function BookingsPage() {
                 <div>
                   <p className="font-semibold text-gray-900">{b.spot?.name}</p>
                   <p className="text-sm text-gray-500">{b.spot?.type === 'CAR' ? 'Car' : 'Motorcycle'} · {b.spot?.zone}</p>
-                  <p className="text-sm text-gray-500">Date: {b.bookingDate}</p>
+                  {b.startTime ? (
+                    <p className="text-sm text-gray-500">{fmtDT(b.startTime)} → {fmtDT(b.endTime)}</p>
+                  ) : (
+                    <p className="text-sm text-gray-500">Date: {b.bookingDate}</p>
+                  )}
                   <span className={`inline-block mt-2 text-xs font-medium px-2.5 py-1 rounded-full ${statusStyle(b.status)}`}>{b.status}</span>
                 </div>
                 <div className="flex gap-2">
@@ -139,7 +164,7 @@ export default function BookingsPage() {
                   )}
                   {b.status === 'CONFIRMED' && b.bookingDate !== today && (
                     <span className="px-4 py-2 text-xs text-gray-400 bg-gray-50 rounded-lg ring-1 ring-gray-200">
-                      Check-in on {b.bookingDate}
+                      Starts {b.startTime ? fmtDT(b.startTime) : b.bookingDate}
                     </span>
                   )}
                   {b.status !== 'CANCELLED' && b.status !== 'CHECKED_IN' && (

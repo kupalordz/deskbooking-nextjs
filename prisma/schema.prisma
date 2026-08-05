@@ -29,6 +29,8 @@ model Booking {
   userId      String
   userEmail   String
   bookingDate String
+  startTime   String    @default("")
+  endTime     String    @default("")
   status      String    @default("CONFIRMED")
   qrToken     String    @default(uuid())
   checkedInAt DateTime?
@@ -120,6 +122,8 @@ model ParkingBooking {
   userId      String
   userEmail   String
   bookingDate String
+  startTime   String      @default("")
+  endTime     String      @default("")
   status      String      @default("CONFIRMED")
   qrToken     String      @default(uuid())
   checkedInAt DateTime?

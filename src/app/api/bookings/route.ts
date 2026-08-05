@@ -15,17 +15,34 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
+  const startTime = (body.startTime as string) || '';
+  const endTime = (body.endTime as string) || '';
 
-  const existing = await prisma.booking.findFirst({
-    where: {
-      deskId: Number(body.deskId),
-      bookingDate: body.bookingDate,
-      status: { not: 'CANCELLED' },
-    },
-  });
+  let existing;
+  if (startTime && endTime) {
+    existing = await prisma.booking.findFirst({
+      where: {
+        deskId: Number(body.deskId),
+        status: { not: 'CANCELLED' },
+        AND: [
+          { startTime: { not: '' } },
+          { startTime: { lt: endTime } },
+          { endTime: { gt: startTime } },
+        ],
+      },
+    });
+  } else {
+    existing = await prisma.booking.findFirst({
+      where: {
+        deskId: Number(body.deskId),
+        bookingDate: body.bookingDate,
+        status: { not: 'CANCELLED' },
+      },
+    });
+  }
 
   if (existing) {
-    return NextResponse.json({ error: 'Desk already booked for this date' }, { status: 400 });
+    return NextResponse.json({ error: 'Desk already booked for this time' }, { status: 400 });
   }
 
   const booking = await prisma.booking.create({
@@ -34,6 +51,8 @@ export async function POST(request: Request) {
       userId: 'local-user-001',
       userEmail: 'local@albertsons.com',
       bookingDate: body.bookingDate,
+      startTime,
+      endTime,
       status: 'CONFIRMED',
     },
     include: { desk: true },

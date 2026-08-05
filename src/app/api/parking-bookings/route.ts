@@ -16,17 +16,34 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
+  const startTime = (body.startTime as string) || '';
+  const endTime = (body.endTime as string) || '';
 
-  const existing = await prisma.parkingBooking.findFirst({
-    where: {
-      spotId: Number(body.spotId),
-      bookingDate: body.bookingDate,
-      status: { not: 'CANCELLED' },
-    },
-  });
+  let existing;
+  if (startTime && endTime) {
+    existing = await prisma.parkingBooking.findFirst({
+      where: {
+        spotId: Number(body.spotId),
+        status: { not: 'CANCELLED' },
+        AND: [
+          { startTime: { not: '' } },
+          { startTime: { lt: endTime } },
+          { endTime: { gt: startTime } },
+        ],
+      },
+    });
+  } else {
+    existing = await prisma.parkingBooking.findFirst({
+      where: {
+        spotId: Number(body.spotId),
+        bookingDate: body.bookingDate,
+        status: { not: 'CANCELLED' },
+      },
+    });
+  }
 
   if (existing) {
-    return NextResponse.json({ error: 'Spot already booked for this date' }, { status: 400 });
+    return NextResponse.json({ error: 'Spot already booked for this time' }, { status: 400 });
   }
 
   const booking = await prisma.parkingBooking.create({
@@ -35,6 +52,8 @@ export async function POST(request: Request) {
       userId: 'local-user-001',
       userEmail: 'local@albertsons.com',
       bookingDate: body.bookingDate,
+      startTime,
+      endTime,
       status: 'CONFIRMED',
     },
     include: { spot: true },

@@ -16,13 +16,32 @@ type Desk = {
 type Floor = { id: number; floorId: string; name: string; imageUrl: string; isParking: boolean };
 type BookingSummary = { bookingDate: string; status: string; deskId: number };
 
+function addOneDay(d: string) {
+  const dt = new Date(d + 'T00:00:00');
+  dt.setDate(dt.getDate() + 1);
+  return dt.toISOString().split('T')[0];
+}
+
+function fmtDate(d: string) {
+  const [, m, day] = d.split('-');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[parseInt(m) - 1]} ${parseInt(day)}`;
+}
+
 export default function FloorMap() {
   const [floors, setFloors] = useState<Floor[]>([]);
   const [desks, setDesks] = useState<Desk[]>([]);
   const [floor, setFloor] = useState('');
-  const [bookedIds, setBookedIds] = useState<number[]>([]);
+  const [allBookings, setAllBookings] = useState<BookingSummary[]>([]);
   const [selected, setSelected] = useState<Desk | null>(null);
   const [msg, setMsg] = useState('');
+  const today = new Date().toISOString().split('T')[0];
+  const [bookDate, setBookDate] = useState(today);
+  const [startTime, setStartTime] = useState('08:00');
+  const [endTime, setEndTime] = useState('17:00');
+
+  const crossDay = endTime <= startTime;
+  const endDate = crossDay ? addOneDay(bookDate) : bookDate;
 
   function load() {
     fetch('/api/floors').then((r) => r.json()).then((d) => {
@@ -32,11 +51,7 @@ export default function FloorMap() {
     });
     fetch('/api/desks').then((r) => r.json()).then((d) => setDesks(Array.isArray(d) ? d : []));
     fetch('/api/bookings').then((r) => r.json()).then((d: BookingSummary[]) => {
-      const today = new Date().toISOString().split('T')[0];
-      const ids = (Array.isArray(d) ? d : [])
-        .filter((b) => b.bookingDate === today && b.status !== 'CANCELLED')
-        .map((b) => b.deskId);
-      setBookedIds(ids);
+      setAllBookings(Array.isArray(d) ? d : []);
     });
   }
 
@@ -44,6 +59,10 @@ export default function FloorMap() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const bookedIds = allBookings
+    .filter((b) => b.bookingDate === bookDate && b.status !== 'CANCELLED')
+    .map((b) => b.deskId);
 
   const currentFloor = floors.find((f) => f.floorId === floor);
   const floorDesks = desks.filter((d) => d.floorId === floor && d.active);
@@ -56,18 +75,20 @@ export default function FloorMap() {
 
   function book() {
     if (!selected) return;
-    const today = new Date().toISOString().split('T')[0];
+    const startISO = `${bookDate}T${startTime}`;
+    const endISO = `${endDate}T${endTime}`;
     fetch('/api/bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deskId: selected.id, bookingDate: today }),
+      body: JSON.stringify({ deskId: selected.id, bookingDate: bookDate, startTime: startISO, endTime: endISO }),
     }).then((r) => {
       if (r.ok) {
         setMsg('Booked ' + selected.name + '!');
-        setBookedIds((p) => [...p, selected.id]);
+        setAllBookings((p) => [...p, { bookingDate: bookDate, status: 'CONFIRMED', deskId: selected.id }]);
         setSelected(null);
+        setTimeout(() => setMsg(''), 3000);
       } else {
-        setMsg('Already booked for today');
+        r.json().then((d) => { setMsg(d.error ?? 'Booking failed'); setTimeout(() => setMsg(''), 3000); });
       }
     });
   }
@@ -184,34 +205,73 @@ export default function FloorMap() {
         </div>
       )}
 
-      {/* Desk detail bottom sheet */}
+      {/* Desk booking bottom sheet */}
       {selected && (
-        <div className="flex-shrink-0 bg-white border-t border-gray-200 shadow-lg">
-          <div className="flex items-center justify-between gap-3 px-4 py-3">
+        <div className="flex-shrink-0 bg-white border-t border-gray-200 shadow-lg px-4 pt-3 pb-4">
+          {/* Desk info + close */}
+          <div className="flex items-start justify-between mb-3">
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-gray-900 text-sm truncate">{selected.name}</p>
               <p className="text-xs text-gray-400 truncate">
                 {selected.zone ? selected.zone + ' · ' : ''}{selected.floorId}
               </p>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {bookedIds.includes(selected.id) ? (
-                <span className="text-xs font-medium text-red-600 bg-red-50 px-3 py-1.5 rounded-full">Already booked</span>
-              ) : (
-                <button
-                  onClick={book}
-                  className="px-4 py-2 bg-[#1e3a5f] text-white rounded-full text-sm font-semibold hover:bg-[#16304d] active:scale-95 transition-transform"
-                >
-                  Book Today
-                </button>
-              )}
-              <button
-                onClick={() => setSelected(null)}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 active:scale-95 text-lg leading-none"
-              >
-                ×
-              </button>
+            <button
+              onClick={() => setSelected(null)}
+              className="ml-2 w-7 h-7 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 text-lg leading-none flex-shrink-0"
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Date + time pickers */}
+          <div className="flex gap-2 mb-3 flex-wrap">
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">Date</p>
+              <input
+                type="date"
+                value={bookDate}
+                min={today}
+                onChange={(e) => setBookDate(e.target.value)}
+                className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
+              />
             </div>
+            <div className="w-24">
+              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">Start</p>
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
+              />
+            </div>
+            <div className="w-24">
+              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+                End {crossDay && <span className="text-orange-500 normal-case font-normal">+1d ({fmtDate(endDate)})</span>}
+              </p>
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
+              />
+            </div>
+          </div>
+
+          {/* Book button */}
+          <div className="flex items-center gap-2">
+            {bookedIds.includes(selected.id) ? (
+              <span className="text-xs font-medium text-red-600 bg-red-50 px-3 py-1.5 rounded-full">
+                Already booked on {fmtDate(bookDate)}
+              </span>
+            ) : (
+              <button
+                onClick={book}
+                className="px-5 py-2 bg-[#1e3a5f] text-white rounded-full text-sm font-semibold hover:bg-[#16304d] active:scale-95 transition-transform"
+              >
+                Book
+              </button>
+            )}
           </div>
         </div>
       )}

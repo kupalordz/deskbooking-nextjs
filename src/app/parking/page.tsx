@@ -19,8 +19,23 @@ type ParkingBooking = {
   id: number;
   spotId: number;
   bookingDate: string;
+  startTime: string;
+  endTime: string;
   status: string;
+  spot: { name: string; type: string; zone: string };
 };
+
+function addOneDay(d: string) {
+  const dt = new Date(d + 'T00:00:00');
+  dt.setDate(dt.getDate() + 1);
+  return dt.toISOString().split('T')[0];
+}
+
+function fmtDate(d: string) {
+  const [, m, day] = d.split('-');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${months[parseInt(m) - 1]} ${parseInt(day)}`;
+}
 
 export default function ParkingPage() {
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
@@ -30,10 +45,17 @@ export default function ParkingPage() {
   const [view, setView] = useState<'list' | 'map'>('list');
   const [mapFloor, setMapFloor] = useState('');
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null);
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const today = new Date().toISOString().split('T')[0];
+  const [date, setDate] = useState(today);
+  const [startTime, setStartTime] = useState('08:00');
+  const [endTime, setEndTime] = useState('17:00');
   const [msg, setMsg] = useState('');
   const [msgType, setMsgType] = useState<'ok' | 'err'>('ok');
   const [booking, setBooking] = useState(false);
+
+  const crossDay = endTime <= startTime;
+  const endDate = crossDay ? addOneDay(date) : date;
+
   function load() {
     Promise.all([
       fetch('/api/parking-spots').then((r) => r.json()),
@@ -53,16 +75,15 @@ export default function ParkingPage() {
   const bookedSpotIds = new Set(
     bookings.filter((b) => b.bookingDate === date && b.status !== 'CANCELLED').map((b) => b.spotId)
   );
-  const mySpotIds = new Set(
-    bookings.filter((b) => b.bookingDate === date && b.status !== 'CANCELLED').map((b) => b.spotId)
-  );
 
   async function book(spotId: number) {
     setBooking(true);
+    const startISO = `${date}T${startTime}`;
+    const endISO = `${endDate}T${endTime}`;
     const r = await fetch('/api/parking-bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ spotId, bookingDate: date }),
+      body: JSON.stringify({ spotId, bookingDate: date, startTime: startISO, endTime: endISO }),
     });
     setBooking(false);
     if (r.ok) {
@@ -91,15 +112,40 @@ export default function ParkingPage() {
   return (
     <div className="px-4 py-6 sm:px-8 sm:py-8 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="flex flex-col gap-3 mb-6">
         <h2 className="text-xl font-semibold text-gray-900 tracking-tight">Parking Reservation</h2>
-        <input
-          type="date"
-          value={date}
-          min={new Date().toISOString().split('T')[0]}
-          onChange={(e) => setDate(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
-        />
+        <div className="flex flex-wrap gap-2 items-end">
+          <div>
+            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">Date</p>
+            <input
+              type="date"
+              value={date}
+              min={today}
+              onChange={(e) => setDate(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
+            />
+          </div>
+          <div>
+            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">Start</p>
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
+            />
+          </div>
+          <div>
+            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+              End {crossDay && <span className="text-orange-500 normal-case font-normal">· ends {fmtDate(endDate)}</span>}
+            </p>
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
+            />
+          </div>
+        </div>
       </div>
 
       {msg && (
@@ -221,8 +267,8 @@ export default function ParkingPage() {
 
               {/* Legend */}
               <div className="flex gap-4 px-4 py-2.5 border-t border-gray-100 text-xs text-gray-400">
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-600 flex-shrink-0" />Available (Car)</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-orange-500 flex-shrink-0" />Available (Moto)</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-600 flex-shrink-0" />Car</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-orange-500 flex-shrink-0" />Moto</span>
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-600 flex-shrink-0" />Booked</span>
               </div>
 
@@ -242,7 +288,7 @@ export default function ParkingPage() {
                         disabled={booking}
                         className="px-4 py-2 bg-[#1e3a5f] text-white rounded-full text-sm font-semibold hover:bg-[#16304d] disabled:opacity-50 active:scale-95 transition-transform"
                       >
-                        Book Today
+                        Book
                       </button>
                     )}
                     <button onClick={() => setSelectedSpot(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 text-lg leading-none">×</button>
@@ -268,22 +314,21 @@ export default function ParkingPage() {
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">{zone}</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {filtered.filter((s) => s.zone === zone).map((spot) => {
-                  const isMine = mySpotIds.has(spot.id);
-                  const isTaken = bookedSpotIds.has(spot.id) && !isMine;
+                  const isMine = bookedSpotIds.has(spot.id);
+                  const isTaken = false;
                   return (
                     <div
                       key={spot.id}
                       className={`bg-white rounded-xl p-4 shadow-sm ring-1 flex flex-col gap-2 ${
-                        isMine ? 'ring-blue-400' : isTaken ? 'ring-gray-200 opacity-60' : 'ring-gray-200'
+                        isMine ? 'ring-blue-400' : 'ring-gray-200'
                       }`}
                     >
                       <p className="font-semibold text-gray-900 text-sm">{spot.name}</p>
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full w-fit ${
                         isMine ? 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200'
-                        : isTaken ? 'bg-gray-100 text-gray-500'
                         : 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-200'
                       }`}>
-                        {isMine ? 'Mine' : isTaken ? 'Taken' : 'Available'}
+                        {isMine ? 'Mine' : 'Available'}
                       </span>
                       {!isMine && !isTaken && (
                         <button
