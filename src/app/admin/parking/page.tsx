@@ -3,12 +3,48 @@ import { useEffect, useState } from 'react';
 
 type ParkingSpot = { id: number; name: string; type: string; zone: string };
 
+function EditModal({ spot, onClose, onSaved }: { spot: ParkingSpot; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState({ name: spot.name, type: spot.type, zone: spot.zone });
+
+  async function save() {
+    await fetch('/api/parking-spots/' + spot.id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    });
+    onSaved();
+    onClose();
+  }
+
+  const inputClass = 'px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] w-full';
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+        <h3 className="font-semibold text-gray-900 mb-4">Edit Parking Spot</h3>
+        <div className="flex flex-col gap-3 mb-4">
+          <input className={inputClass} placeholder="Spot name" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
+          <select className={inputClass + ' bg-white'} value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}>
+            <option value="CAR">Car</option>
+            <option value="MOTORCYCLE">Motorcycle</option>
+          </select>
+          <input className={inputClass} placeholder="Zone" value={form.zone} onChange={(e) => setForm((p) => ({ ...p, zone: e.target.value }))} />
+        </div>
+        <div className="flex gap-2">
+          <button onClick={save} className="flex-1 py-2 bg-[#1e3a5f] text-white rounded-lg text-sm font-medium hover:bg-[#16304d]">Save</button>
+          <button onClick={onClose} className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminParkingPage() {
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
   const [name, setName] = useState('');
   const [type, setType] = useState<'CAR' | 'MOTORCYCLE'>('CAR');
   const [zone, setZone] = useState('');
   const [msg, setMsg] = useState('');
+  const [editSpot, setEditSpot] = useState<ParkingSpot | null>(null);
 
   function load() {
     fetch('/api/parking-spots').then((r) => r.json()).then((d) => setSpots(Array.isArray(d) ? d : []));
@@ -23,7 +59,7 @@ export default function AdminParkingPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: name.trim(), type, zone: zone.trim() }),
     });
-    if (r.ok) { setName(''); setMsg('Spot added'); load(); } else { setMsg('Failed to add'); }
+    if (r.ok) { setName(''); setZone(''); setMsg('Spot added'); load(); } else { setMsg('Failed to add'); }
     setTimeout(() => setMsg(''), 3000);
   }
 
@@ -32,8 +68,13 @@ export default function AdminParkingPage() {
     load();
   }
 
+  const cars = spots.filter((s) => s.type === 'CAR');
+  const motos = spots.filter((s) => s.type === 'MOTORCYCLE');
+
   return (
     <div className="p-5 sm:p-7 md:p-8 max-w-3xl">
+      {editSpot && <EditModal spot={editSpot} onClose={() => setEditSpot(null)} onSaved={load} />}
+
       <div className="mb-6">
         <h2 className="text-xl font-bold text-gray-900">Parking Spots</h2>
         <p className="text-sm text-gray-400 mt-0.5">Manage car and motorcycle spots</p>
@@ -41,56 +82,45 @@ export default function AdminParkingPage() {
 
       {msg && <div className="p-3 bg-blue-50 text-blue-800 rounded-lg mb-4 text-sm">{msg}</div>}
 
-      {/* Add form */}
       <div className="bg-white rounded-2xl p-5 shadow-sm ring-1 ring-gray-100 mb-6">
         <h3 className="font-semibold text-gray-900 mb-4">Add Spot</h3>
         <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Spot name (e.g. P-001)"
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
-          />
-          <select
-            value={type}
-            onChange={(e) => setType(e.target.value as 'CAR' | 'MOTORCYCLE')}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
-          >
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Spot name (e.g. P-001)"
+            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]" />
+          <select value={type} onChange={(e) => setType(e.target.value as 'CAR' | 'MOTORCYCLE')}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] bg-white">
             <option value="CAR">Car</option>
             <option value="MOTORCYCLE">Motorcycle</option>
           </select>
-          <input
-            value={zone}
-            onChange={(e) => setZone(e.target.value)}
-            placeholder="Zone (e.g. Level 1)"
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
-          />
-          <button
-            onClick={add}
-            className="px-5 py-2 bg-[#1e3a5f] text-white rounded-lg text-sm font-medium hover:bg-[#16304d]"
-          >
-            Add
-          </button>
+          <input value={zone} onChange={(e) => setZone(e.target.value)} placeholder="Zone (e.g. Level 1)"
+            className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]" />
+          <button onClick={add} className="px-5 py-2 bg-[#1e3a5f] text-white rounded-lg text-sm font-medium hover:bg-[#16304d]">Add</button>
         </div>
       </div>
 
-      {/* Spot list */}
-      {spots.length === 0 && (
-        <div className="bg-white rounded-2xl p-10 text-center shadow-sm ring-1 ring-gray-100 text-gray-400">
-          No parking spots yet. Add one above.
-        </div>
-      )}
-      <div className="flex flex-col gap-3">
-        {spots.map((s) => (
-          <div key={s.id} className="bg-white rounded-xl px-5 py-4 shadow-sm ring-1 ring-gray-100 flex items-center justify-between">
-            <div>
-              <p className="font-semibold text-gray-900 text-sm">{s.name}</p>
-              <p className="text-xs text-gray-500">{s.type === 'CAR' ? '🚗 Car' : '🏍️ Motorcycle'} · {s.zone}</p>
+      {spots.length === 0 && <div className="bg-white rounded-2xl p-10 text-center shadow-sm ring-1 ring-gray-100 text-gray-400">No parking spots yet. Add one above.</div>}
+
+      {[{ label: 'Car Spots', items: cars }, { label: 'Motorcycle Spots', items: motos }].map(({ label, items }) =>
+        items.length > 0 && (
+          <div key={label} className="mb-5">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{label}</p>
+            <div className="flex flex-col gap-2">
+              {items.map((s) => (
+                <div key={s.id} className="bg-white rounded-xl px-5 py-4 shadow-sm ring-1 ring-gray-100 flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">{s.name}</p>
+                    <p className="text-xs text-gray-500">{s.zone}</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <button onClick={() => setEditSpot(s)} className="text-[#1e3a5f] text-sm hover:underline font-medium">Edit</button>
+                    <button onClick={() => remove(s.id)} className="text-red-500 text-sm hover:text-red-700 font-medium">Remove</button>
+                  </div>
+                </div>
+              ))}
             </div>
-            <button onClick={() => remove(s.id)} className="text-red-500 text-sm hover:text-red-700 font-medium">Remove</button>
           </div>
-        ))}
-      </div>
+        )
+      )}
     </div>
   );
 }

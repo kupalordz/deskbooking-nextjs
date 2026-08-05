@@ -50,6 +50,11 @@ model DropdownOption {
   @@unique([category, value])
 }
 
+model Setting {
+  key   String @id
+  value String
+}
+
 model Location {
   id           Int           @id @default(autoincrement())
   country      String
