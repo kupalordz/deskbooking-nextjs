@@ -40,6 +40,7 @@ export default function FloorPlanBuilder() {
   const [locFloor, setLocFloor] = useState('');
   const [newFloorId, setNewFloorId] = useState('');
   const [newFloorName, setNewFloorName] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   function loadFloors() {
     fetch('/api/floors').then((r) => r.json()).then((d) => setFloors(Array.isArray(d) ? d : []));
@@ -68,15 +69,17 @@ export default function FloorPlanBuilder() {
     }
   }, [locBuilding, locFloor]);
 
-  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || !locCountry || !locCity || !locBuilding || !locFloor) {
-      setMsg('Please select Country, City, Building and Floor before uploading');
+  async function handleUpload() {
+    if (!selectedFile) { setMsg('Please choose a floor plan image'); return; }
+    if (!locCountry || !locCity || !locBuilding || !locFloor) {
+      setMsg('Please select Country, City, Building and Floor');
       return;
     }
+    if (!newFloorId || !newFloorName) { setMsg('Floor ID and Floor Name are required'); return; }
     setUploading(true);
+    setMsg('');
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', selectedFile);
     const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
     const { url } = await uploadRes.json();
     const floorRes = await fetch('/api/floors', {
@@ -86,7 +89,8 @@ export default function FloorPlanBuilder() {
     });
     const floor = await floorRes.json();
     setUploading(false);
-    setMsg('Floor plan uploaded');
+    setMsg('Floor plan uploaded successfully');
+    setSelectedFile(null);
     setLocCountry('');
     setLocCity('');
     setLocBuilding('');
@@ -242,10 +246,20 @@ export default function FloorPlanBuilder() {
           </div>
           <div className="flex flex-col justify-end">
             <label className="text-xs text-gray-500 font-medium block mb-1">Floor Plan Image</label>
-            <input type="file" accept="image/*" onChange={handleUpload} className="text-sm" />
+            <input type="file" accept="image/*" onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)} className="text-sm" />
+            {selectedFile && <p className="text-xs text-gray-400 mt-1 truncate">{selectedFile.name}</p>}
           </div>
         </div>
-        {uploading && <p className="text-sm text-gray-500">Uploading...</p>}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleUpload}
+            disabled={uploading}
+            className="px-5 py-2 bg-[#1a2535] text-white text-sm font-medium rounded-lg hover:bg-[#243148] disabled:opacity-50"
+          >
+            {uploading ? 'Uploading…' : 'Upload Floor Plan'}
+          </button>
+          {uploading && <p className="text-sm text-gray-400">Please wait…</p>}
+        </div>
       </div>
 
       {/* Floor selector */}
