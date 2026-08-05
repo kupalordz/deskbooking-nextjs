@@ -6,7 +6,7 @@ const adapter = new PrismaLibSql({ url: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
 export async function DELETE(
-  request: Request,
+  _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -20,12 +20,12 @@ export async function PATCH(
 ) {
   const { id } = await params;
   const body = await request.json();
-  const desk = await prisma.desk.update({
-    where: { id: Number(id) },
-    data: {
-      xPosition: body.xPosition,
-      yPosition: body.yPosition,
-    },
-  });
+  const data: Record<string, unknown> = {};
+  if (body.xPosition !== undefined) data.xPosition = body.xPosition;
+  if (body.yPosition !== undefined) data.yPosition = body.yPosition;
+  if (body.hasMonitor !== undefined) data.hasMonitor = body.hasMonitor;
+  if (body.hasKeyboard !== undefined) data.hasKeyboard = body.hasKeyboard;
+  if (body.hasPedestal !== undefined) data.hasPedestal = body.hasPedestal;
+  const desk = await prisma.desk.update({ where: { id: Number(id) }, data });
   return NextResponse.json(desk);
 }

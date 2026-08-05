@@ -7,16 +7,19 @@ datasource db {
 }
 
 model Desk {
-  id         Int       @id @default(autoincrement())
-  name       String
-  zone       String
-  floorId    String
-  buildingId String
-  xPosition  Float
-  yPosition  Float
-  active     Boolean   @default(true)
-  restricted Boolean   @default(false)
-  bookings   Booking[]
+  id           Int       @id @default(autoincrement())
+  name         String
+  zone         String
+  floorId      String
+  buildingId   String
+  xPosition    Float
+  yPosition    Float
+  active       Boolean   @default(true)
+  restricted   Boolean   @default(false)
+  hasMonitor   Boolean   @default(false)
+  hasKeyboard  Boolean   @default(false)
+  hasPedestal  Boolean   @default(false)
+  bookings     Booking[]
 }
 
 model Booking {
@@ -37,6 +40,47 @@ model Floor {
   floorId  String @unique
   name     String
   imageUrl String
+}
+
+model Location {
+  id           Int           @id @default(autoincrement())
+  country      String
+  city         String
+  building     String
+  floor        String
+  zone         String
+  createdAt    DateTime      @default(now())
+  userProfiles UserProfile[]
+}
+
+model UserProfile {
+  id         Int       @id @default(autoincrement())
+  name       String
+  email      String    @unique
+  role       String
+  group      String
+  locationId Int?
+  location   Location? @relation(fields: [locationId], references: [id])
+  vehicles   Vehicle[]
+  createdAt  DateTime  @default(now())
+}
+
+model Vehicle {
+  id            Int         @id @default(autoincrement())
+  userProfileId Int
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id])
+  type          String
+  plateNumber   String
+  createdAt     DateTime    @default(now())
+}
+
+model ShiftSchedule {
+  id        Int      @id @default(autoincrement())
+  name      String
+  startTime String
+  endTime   String
+  days      String
+  createdAt DateTime @default(now())
 }
 
 model ParkingSpot {

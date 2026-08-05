@@ -10,7 +10,18 @@ type Desk = {
   yPosition: number;
   active: boolean;
   restricted: boolean;
+  hasMonitor: boolean;
+  hasKeyboard: boolean;
+  hasPedestal: boolean;
 };
+
+const adminSections = [
+  { href: '/admin/users', label: 'User Profiles', desc: 'Manage users and vehicles' },
+  { href: '/admin/locations', label: 'Locations', desc: 'Country, city, building, floor, zone' },
+  { href: '/admin/shifts', label: 'Shift Schedules', desc: 'Define work shifts and days' },
+  { href: '/admin/parking', label: 'Parking Spots', desc: 'Car and motorcycle spots' },
+  { href: '/admin/floorplans', label: 'Floor Plan Builder', desc: 'Upload maps and place desk pins' },
+];
 
 export default function AdminPage() {
   const [desks, setDesks] = useState<Desk[]>([]);
@@ -41,7 +52,7 @@ export default function AdminPage() {
         xPosition: Number(form.xPosition),
         yPosition: Number(form.yPosition),
       }),
-    }).then((r) => r.json()).then(() => {
+    }).then(() => {
       setMsg('Desk added');
       load();
       setForm({ name: '', zone: '', floorId: 'floor-1', buildingId: 'hq', xPosition: '500', yPosition: '300', active: true, restricted: false });
@@ -52,27 +63,39 @@ export default function AdminPage() {
     fetch('/api/desks/' + id, { method: 'DELETE' }).then(() => { setMsg('Desk removed'); load(); });
   }
 
+  function toggleAmenity(id: number, field: 'hasMonitor' | 'hasKeyboard' | 'hasPedestal', current: boolean) {
+    fetch('/api/desks/' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: !current }),
+    }).then(() => load());
+  }
+
   const inputClass = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]';
 
   return (
     <div className="px-4 py-6 sm:px-8 sm:py-8 md:px-12 md:py-12 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight">Admin - Manage Desks</h2>
-        
-        <div className="flex gap-2">
-          <a href="/admin/parking" className="px-4 py-2 bg-white text-[#1e3a5f] ring-1 ring-[#1e3a5f] rounded-lg text-sm font-medium hover:bg-gray-50">
-            Parking Spots
+      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-6 tracking-tight">Admin</h2>
+
+      {/* Section cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-8">
+        {adminSections.map((s) => (
+          <a
+            key={s.href}
+            href={s.href}
+            className="bg-white rounded-xl p-4 shadow-sm ring-1 ring-gray-100 hover:ring-[#1e3a5f] hover:shadow-md transition-all group"
+          >
+            <p className="font-semibold text-gray-900 text-sm group-hover:text-[#1e3a5f]">{s.label}</p>
+            <p className="text-xs text-gray-400 mt-1">{s.desc}</p>
           </a>
-          <a href="/admin/floorplans" className="px-4 py-2 bg-[#1e3a5f] text-white rounded-lg text-sm font-medium hover:bg-[#16304d]">
-            Floor Plan Builder
-          </a>
-        </div>
+        ))}
       </div>
 
       {msg && <div className="p-3 bg-green-50 text-green-800 rounded-lg mb-4 text-sm">{msg}</div>}
 
+      {/* Add desk form */}
       <div className="bg-white rounded-2xl p-5 md:p-6 mb-6 shadow-sm ring-1 ring-gray-100">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">Add new desk</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Add Desk</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <div>
             <label className="text-xs text-gray-500 block mb-1">Desk name</label>
@@ -108,12 +131,13 @@ export default function AdminPage() {
         <button onClick={add} className="px-5 py-2.5 bg-[#1e3a5f] text-white rounded-lg font-medium hover:bg-[#16304d]">Add Desk</button>
       </div>
 
+      {/* Desk table */}
       <div className="bg-white rounded-2xl overflow-hidden shadow-sm ring-1 ring-gray-100">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50">
-                {['Name', 'Zone', 'Floor', 'Position', 'Status', ''].map((h) => (
+                {['Name', 'Zone', 'Floor', 'Status', 'Amenities', ''].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs text-gray-500 font-medium border-b border-gray-200">{h}</th>
                 ))}
               </tr>
@@ -124,11 +148,26 @@ export default function AdminPage() {
                   <td className="px-4 py-3 font-medium">{d.name}</td>
                   <td className="px-4 py-3 text-gray-500">{d.zone}</td>
                   <td className="px-4 py-3 text-gray-500">{d.floorId}</td>
-                  <td className="px-4 py-3 text-gray-500">({d.xPosition}, {d.yPosition})</td>
                   <td className="px-4 py-3">
                     <span className={`text-xs px-2 py-1 rounded-full ${d.restricted ? 'bg-purple-50 text-purple-700' : 'bg-green-50 text-green-700'}`}>
                       {d.restricted ? 'Restricted' : 'Open'}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-1">
+                      {(['hasMonitor', 'hasKeyboard', 'hasPedestal'] as const).map((field) => {
+                        const label = field === 'hasMonitor' ? 'Mon' : field === 'hasKeyboard' ? 'KB' : 'Ped';
+                        return (
+                          <button
+                            key={field}
+                            onClick={() => toggleAmenity(d.id, field, d[field])}
+                            className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors ${d[field] ? 'bg-[#1e3a5f] text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <button onClick={() => remove(d.id)} className="px-2.5 py-1 bg-red-50 text-red-700 rounded text-xs hover:bg-red-100">Remove</button>
