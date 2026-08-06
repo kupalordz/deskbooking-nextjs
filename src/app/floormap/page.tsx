@@ -155,7 +155,7 @@ export default function FloorMap() {
     <div className="flex h-[calc(100vh-8rem)] md:h-[calc(100vh-5rem)] overflow-hidden bg-gray-50">
 
       {/* ── LEFT: toolbar + map + mobile sheet ── */}
-      <div className="flex flex-col flex-1 min-w-0">
+      <div className="flex flex-col flex-1 min-w-0 relative">
 
         {/* Toolbar */}
         <div
@@ -282,7 +282,7 @@ export default function FloorMap() {
 
         {/* ── Mobile bottom sheet (hidden on desktop) ── */}
         {selected && (
-          <div className="md:hidden flex-shrink-0 bg-white border-t border-gray-200 shadow-lg px-4 pt-3 pb-4">
+          <div className="md:hidden absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg px-4 pt-3 pb-4 z-30">
             {/* Desk info + close */}
             <div className="flex items-start justify-between mb-3">
               <div className="min-w-0 flex-1">
