@@ -487,7 +487,7 @@ export default function FloorPlanBuilder() {
                           padding: '0 3px', boxSizing: 'border-box',
                         }}>
                           {pw >= 30 && ph >= 14 && (
-                            <span style={{ fontSize: Math.min(9, Math.floor(ph * 0.52)), fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', lineHeight: 1, letterSpacing: '0.01em' }}>
+                            <span style={{ fontSize: Math.min(7, Math.floor(ph * 0.40)), fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', lineHeight: 1, letterSpacing: '0.01em' }}>
                               {d.name}
                             </span>
                           )}
@@ -578,7 +578,7 @@ export default function FloorPlanBuilder() {
                     boxSizing: 'border-box',
                   }}>
                     {editPin.w >= 30 && editPin.h >= 14 && (
-                      <span style={{ fontSize: Math.min(9, Math.floor(editPin.h * 0.52)), fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', lineHeight: 1 }}>
+                      <span style={{ fontSize: Math.min(7, Math.floor(editPin.h * 0.40)), fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', lineHeight: 1 }}>
                         {selectedPinDesk?.name}
                       </span>
                     )}
