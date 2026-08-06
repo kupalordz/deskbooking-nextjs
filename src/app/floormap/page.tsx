@@ -210,7 +210,7 @@ export default function FloorMap() {
               doubleClick={{ mode: 'zoomIn', step: 0.7 }}
               pinch={{ step: 5 }} wheel={{ step: 0.2 }}
             >
-              {({ zoomIn, zoomOut, resetTransform, state }) => (
+              {({ zoomIn, zoomOut, resetTransform }) => (
                 <div className="w-full h-full relative">
                   {/* Zoom controls — bottom right */}
                   <div className="absolute bottom-4 right-4 z-50 flex flex-col bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
@@ -231,16 +231,15 @@ export default function FloorMap() {
                             position: 'absolute',
                             left: `${d.xPosition / 10}%`,
                             top: `${d.yPosition / 10}%`,
-                            transform: `translate(-50%, -50%) scale(${1 / state.scale})`,
-                            transformOrigin: 'center center',
+                            transform: 'translate(-50%, -50%)',
                             cursor: 'pointer',
                             zIndex: 20,
                           }}
                           title={d.name}
                         >
                           {(() => {
-                            const pw = isDesktop ? (d.pinWidth ?? 16) : Math.round((d.pinWidth ?? 16) * 0.65);
-                            const ph = isDesktop ? (d.pinHeight ?? 10) : Math.round((d.pinHeight ?? 10) * 0.65);
+                            const pw = d.pinWidth ?? 16;
+                            const ph = d.pinHeight ?? 10;
                             return (
                               <div style={{
                                 width: pw, height: ph, borderRadius: 2,
