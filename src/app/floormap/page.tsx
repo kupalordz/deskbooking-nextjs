@@ -251,12 +251,12 @@ export default function FloorMap() {
                                 overflow: 'hidden', padding: '0 3px', boxSizing: 'border-box',
                               }}>
                                 {pw >= 30 && ph >= 14 && (
-                                  <span style={{ fontSize: Math.min(7, Math.floor(ph * 0.40)), fontWeight: 700, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', lineHeight: 1, letterSpacing: '0.01em' }}>
+                                  <span style={{ fontSize: Math.min(7, Math.floor(ph * 0.40)), fontWeight: 700, color: 'white', whiteSpace: 'normal', maxWidth: '100%', lineHeight: 1.1, letterSpacing: '0.01em', textAlign: 'center', wordBreak: 'break-word' }}>
                                     {d.name}
                                   </span>
                                 )}
                                 {pw >= 30 && ph >= 22 && d.zone && (
-                                  <span style={{ fontSize: Math.min(7, Math.floor(ph * 0.35)), color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', lineHeight: 1.2 }}>
+                                  <span style={{ fontSize: Math.min(6, Math.floor(ph * 0.28)), color: 'rgba(255,255,255,0.8)', whiteSpace: 'normal', maxWidth: '100%', lineHeight: 1.1, textAlign: 'center', wordBreak: 'break-word' }}>
                                     {d.zone}
                                   </span>
                                 )}
