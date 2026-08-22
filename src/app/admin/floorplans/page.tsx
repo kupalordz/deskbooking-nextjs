@@ -57,6 +57,15 @@ export default function FloorPlanBuilder() {
   const [showUpload, setShowUpload] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Floor | null>(null);
 
+  const [windowWidth, setWindowWidth] = useState(1024);
+  useEffect(() => {
+    const update = () => setWindowWidth(window.innerWidth);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  const pinScale = windowWidth >= 768 ? 1 : windowWidth >= 640 ? 0.65 : windowWidth >= 480 ? 0.45 : 0.35;
+
   function loadFloors() {
     fetch('/api/floors').then((r) => r.json()).then((d) => setFloors(Array.isArray(d) ? d : []));
   }
@@ -458,8 +467,8 @@ export default function FloorPlanBuilder() {
 
                   {/* Desk pins */}
                   {floorDesks.map((d) => {
-                    const pw = d.pinWidth ?? 16;
-                    const ph = d.pinHeight ?? 10;
+                    const pw = (d.pinWidth ?? 16) * pinScale;
+                    const ph = (d.pinHeight ?? 10) * pinScale;
                     const pr = d.pinRotation ?? 0;
                     const isSelected = selectedPinId === d.id;
                     return (
