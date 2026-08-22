@@ -275,7 +275,7 @@ export default function AdminParkingPage() {
           </select>
         </div>
 
-        <div className="relative bg-gray-50" style={{ minHeight: 300 }}>
+        <div className="relative bg-gray-50" style={{ minHeight: 500 }}>
           {!currentMapFloor && (
             <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
               {floors.length === 0 ? 'No parking floor maps yet. Upload one in Floor Plans with "Parking floor" enabled.' : 'Select a floor above.'}
@@ -293,14 +293,14 @@ export default function AdminParkingPage() {
               wheel={{ step: 0.2 }}
             >
               {({ zoomIn, zoomOut, resetTransform }) => (
-                <div className="relative w-full" style={{ minHeight: 300 }}>
+                <div className="relative w-full" style={{ minHeight: 500 }}>
                   <div className="absolute top-3 right-3 z-50 flex flex-col bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
                     <button type="button" onClick={() => zoomIn()} className="w-9 h-9 flex items-center justify-center text-lg text-gray-600 hover:bg-gray-50 border-b border-gray-100">+</button>
                     <button type="button" onClick={() => zoomOut()} className="w-9 h-9 flex items-center justify-center text-lg text-gray-600 hover:bg-gray-50 border-b border-gray-100">−</button>
                     <button type="button" onClick={() => resetTransform()} className="w-9 h-8 flex items-center justify-center text-[9px] font-medium text-gray-400 hover:bg-gray-50 uppercase tracking-wide">Fit</button>
                   </div>
 
-                  <TransformComponent wrapperStyle={{ width: '100%', minHeight: 300 }} contentStyle={{ width: '100%' }}>
+                  <TransformComponent wrapperStyle={{ width: '100%', minHeight: 500 }} contentStyle={{ width: '100%' }}>
                     <div
                       ref={imgRef}
                       style={{ position: 'relative', width: '100%', cursor: placing ? 'crosshair' : 'default' }}

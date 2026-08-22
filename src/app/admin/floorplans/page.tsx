@@ -430,7 +430,7 @@ export default function FloorPlanBuilder() {
               doubleClick={{ mode: 'zoomIn', step: 0.5 }}
               wheel={{ step: 0.2 }}
             >
-              <TransformComponent wrapperStyle={{ width: '100%' }} contentStyle={{ width: '100%' }}>
+              <TransformComponent wrapperStyle={{ width: '100%', minHeight: 500 }} contentStyle={{ width: '100%' }}>
                 <div
                   ref={imgRef}
                   onClick={handleImageClick}
