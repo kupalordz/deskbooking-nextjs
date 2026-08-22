@@ -573,8 +573,8 @@ export default function FloorPlanBuilder() {
                 {/* Live preview */}
                 <div className="flex items-center justify-center bg-gray-100 rounded-xl mb-4" style={{ height: 72 }}>
                   <div style={{
-                    width: editPin.w,
-                    height: editPin.h,
+                    width: editPin.w * pinScale,
+                    height: editPin.h * pinScale,
                     borderRadius: 2,
                     background: selectedPinDesk?.restricted ? '#7c3aed' : '#16a34a',
                     transform: `rotate(${editPin.r}deg)`,
@@ -586,13 +586,13 @@ export default function FloorPlanBuilder() {
                     padding: '0 3px',
                     boxSizing: 'border-box',
                   }}>
-                    {editPin.w >= 30 && editPin.h >= 14 && (
-                      <span style={{ fontSize: Math.min(7, Math.floor(editPin.h * 0.40)), fontWeight: 700, color: 'white', whiteSpace: 'normal', maxWidth: '100%', lineHeight: 1.1, textAlign: 'center', wordBreak: 'break-word' }}>
+                    {editPin.w * pinScale >= 30 && editPin.h * pinScale >= 14 && (
+                      <span style={{ fontSize: Math.min(7, Math.floor(editPin.h * pinScale * 0.40)), fontWeight: 700, color: 'white', whiteSpace: 'normal', maxWidth: '100%', lineHeight: 1.1, textAlign: 'center', wordBreak: 'break-word' }}>
                         {selectedPinDesk?.name}
                       </span>
                     )}
-                    {editPin.w >= 30 && editPin.h >= 22 && selectedPinDesk?.zone && (
-                      <span style={{ fontSize: Math.min(6, Math.floor(editPin.h * 0.28)), color: 'rgba(255,255,255,0.8)', whiteSpace: 'normal', maxWidth: '100%', lineHeight: 1.1, textAlign: 'center', wordBreak: 'break-word' }}>
+                    {editPin.w * pinScale >= 30 && editPin.h * pinScale >= 22 && selectedPinDesk?.zone && (
+                      <span style={{ fontSize: Math.min(6, Math.floor(editPin.h * pinScale * 0.28)), color: 'rgba(255,255,255,0.8)', whiteSpace: 'normal', maxWidth: '100%', lineHeight: 1.1, textAlign: 'center', wordBreak: 'break-word' }}>
                         {selectedPinDesk.zone}
                       </span>
                     )}
