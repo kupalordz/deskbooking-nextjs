@@ -65,13 +65,16 @@ export default function FloorMap() {
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('17:00');
 
-  const [isDesktop, setIsDesktop] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(1024);
   useEffect(() => {
-    const check = () => setIsDesktop(window.innerWidth >= 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
+    const update = () => setWindowWidth(window.innerWidth);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
   }, []);
+  const isDesktop = windowWidth >= 768;
+  // Responsive pin scale: full size ≥768px, 65% at tablet (640–767px), 45% at mobile (480–639px), 35% on small phones (<480px)
+  const pinScale = windowWidth >= 768 ? 1 : windowWidth >= 640 ? 0.65 : windowWidth >= 480 ? 0.45 : 0.35;
 
   const crossDay = endTime <= startTime;
   const endDate = crossDay ? addOneDay(bookDate) : bookDate;
@@ -238,8 +241,8 @@ export default function FloorMap() {
                           title={d.name}
                         >
                           {(() => {
-                            const pw = d.pinWidth ?? 16;
-                            const ph = d.pinHeight ?? 10;
+                            const pw = (d.pinWidth ?? 16) * pinScale;
+                            const ph = (d.pinHeight ?? 10) * pinScale;
                             return (
                               <div style={{
                                 width: pw, height: ph, borderRadius: 2,
