@@ -461,7 +461,7 @@ export default function FloorPlanBuilder() {
                   {/* Pending position indicator */}
                   {pendingPos && (
                     <div style={{ position: 'absolute', left: `${pendingPos.x / 10}%`, top: `${pendingPos.y / 10}%`, transform: 'translate(-50%, -50%)', pointerEvents: 'none' }}>
-                      <div className="w-4 h-4 rounded-full bg-blue-500 ring-2 ring-white shadow-lg animate-pulse" />
+                      <div className="rounded-full bg-blue-500 ring-2 ring-white shadow-lg animate-pulse" style={{ width: Math.round(16 * pinScale), height: Math.round(16 * pinScale) }} />
                     </div>
                   )}
 
